@@ -1,9 +1,57 @@
-from fastapi import FastAPI
+import logging
+import time
 
-from app.src.api.cv_generator.cv_generator.cv_generator import router as cv_generator_router
+from fastapi import FastAPI, Request
+
+from app.api import cv, memory, users
+from app.config import settings
+
+_LOG_FORMAT = "%(asctime)s %(levelname)-5s [%(name)s] %(message)s"
+
+
+def _configure_logging() -> None:
+    """Configure the root logger from LOG_LEVEL (DEBUG/INFO/WARNING/ERROR)."""
+    raw_level = (settings.log_level or "INFO").strip().upper()
+    if raw_level == "WARN":
+        raw_level = "WARNING"
+    level = logging.getLevelName(raw_level)
+    if not isinstance(level, int):
+        level = logging.INFO
+
+    logging.basicConfig(level=level, format=_LOG_FORMAT)
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        logging.getLogger(name).setLevel(level)
+    logging.getLogger(__name__).info("Logging configured at level %s", raw_level)
+
+
+_configure_logging()
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
-app.include_router(cv_generator_router)
+app.include_router(cv.router)
+app.include_router(memory.router)
+app.include_router(users.router)
+
+
+@app.middleware("http")
+async def trace_requests(request: Request, call_next):
+    start = time.perf_counter()
+    logger.info("--> %s %s", request.method, request.url.path)
+    try:
+        response = await call_next(request)
+    except Exception:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.exception("!!! %s %s failed after %.1fms", request.method, request.url.path, elapsed_ms)
+        raise
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    logger.info(
+        "<-- %s %s %s (%.1fms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed_ms,
+    )
+    return response
 
 
 @app.get("/health")

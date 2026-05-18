@@ -1,5 +1,13 @@
 import { sendMessage, setDraftMessage } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
+import styles from "./cvChatMessageComposer.module.css";
+
+const PROMPT_CHIPS = [
+  "Make it more concise",
+  "Quantify my impact",
+  "Match the job's tone",
+  "Improve ATS keyword coverage",
+];
 
 export const CvChatMessageComposer = () => {
   const dispatch = useAppDispatch();
@@ -14,23 +22,38 @@ export const CvChatMessageComposer = () => {
   };
 
   return (
-    <div className="cv-chat-message-composer">
-      <input
-        type="text"
-        value={draftMessage}
-        onChange={(e) => dispatch(setDraftMessage(e.target.value))}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            onSend();
-          }
-        }}
-        placeholder="Type your message..."
-        disabled={status === "loading"}
-      />
-      <button type="button" onClick={onSend} disabled={disabled}>
-        Send
-      </button>
+    <div className={styles.composer}>
+      <div className={styles.chips}>
+        {PROMPT_CHIPS.map((chip) => (
+          <button
+            key={chip}
+            type="button"
+            className={styles.chip}
+            onClick={() => dispatch(setDraftMessage(chip))}
+          >
+            <span aria-hidden="true">↳</span>
+            {chip}
+          </button>
+        ))}
+      </div>
+      <div className={styles.inputRow}>
+        <textarea
+          className={styles.input}
+          rows={2}
+          value={draftMessage}
+          onChange={(e) => dispatch(setDraftMessage(e.target.value))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              onSend();
+            }
+          }}
+          placeholder="Ask Hirable to refine further…  (Ctrl/⌘+Enter to send)"
+        />
+        <button type="button" className={styles.send} onClick={onSend} disabled={disabled}>
+          Send
+        </button>
+      </div>
     </div>
   );
 };

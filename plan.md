@@ -1,0 +1,1 @@
+# mitu sonumit korraga naidata 

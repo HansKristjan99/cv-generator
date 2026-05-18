@@ -1,0 +1,256 @@
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  background: var(--color-bg);
+}
+
+/* ---- Sidebar ---- */
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding: 28px 20px;
+  background: var(--color-panel);
+  border-right: 1px solid var(--color-panel-rule);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brandTile {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.brandName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  color: var(--color-ink);
+}
+
+.brandTag {
+  margin: 3px 0 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-muted-deep);
+}
+
+/* ---- Nav ---- */
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.tab:hover {
+  background: rgba(255, 249, 237, 0.6);
+}
+
+.tabActive {
+  background: #fff9ed;
+  border-color: var(--color-panel-rule);
+}
+
+.tabNum {
+  width: 16px;
+  flex-shrink: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.tabActive .tabNum {
+  color: var(--color-primary);
+}
+
+.tabText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.tabLabel {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--color-muted-deep);
+}
+
+.tabActive .tabLabel {
+  color: var(--color-ink);
+}
+
+.tabDetail {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+}
+
+.tabDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* ---- Sidebar footer ---- */
+.footerArea {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.houseRules {
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--color-mint);
+}
+
+.houseQuote {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--color-mint-ink-deep);
+}
+
+.houseLabel {
+  margin: 6px 0 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-mint-ink);
+}
+
+.account {
+  display: flex;
+}
+
+.status {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-muted-deep);
+}
+
+.authBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.authButton {
+  composes: btnPrimary from "../primitives/primitives.module.css";
+  width: 100%;
+}
+
+.authButtonSecondary {
+  composes: btnSecondary from "../primitives/primitives.module.css";
+  width: 100%;
+}
+
+/* ---- Main ---- */
+.main {
+  min-width: 0;
+}
+
+/* ---- Placeholder / sign-in card ---- */
+.placeholder {
+  composes: card from "../primitives/primitives.module.css";
+  width: min(620px, calc(100% - 64px));
+  margin: 64px auto;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.placeholderCompact {
+  align-items: center;
+  text-align: center;
+}
+
+.placeholderEyebrow {
+  composes: eyebrow from "../primitives/primitives.module.css";
+}
+
+.placeholderTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.7rem;
+  line-height: 1.15;
+  color: var(--color-ink);
+}
+
+.signInActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    display: block;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    gap: 18px;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-panel-rule);
+  }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .footerArea {
+    margin-top: 0;
+  }
+}

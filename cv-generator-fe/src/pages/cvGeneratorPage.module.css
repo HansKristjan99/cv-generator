@@ -1,0 +1,99 @@
+.page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 56px 56px;
+  transition: max-width 0.25s ease;
+}
+
+.pageWide {
+  max-width: 1480px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.breadcrumbSep {
+  color: var(--color-rule);
+}
+
+.breadcrumbActive {
+  color: var(--color-ink);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.status {
+  composes: pillMint from "../primitives/primitives.module.css";
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.reset {
+  composes: btnSecondary from "../primitives/primitives.module.css";
+  padding: 9px 14px;
+}
+
+.panelGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .page {
+    padding: 28px 24px 40px;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+
+  .panelGrid {
+    grid-template-columns: 1fr;
+  }
+}

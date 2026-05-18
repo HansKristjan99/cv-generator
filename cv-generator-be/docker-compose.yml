@@ -1,0 +1,58 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cvapp-api
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: local
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: postgresql+psycopg://cvapp:pw@postgres:5432/cvapp
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: cvapp
+      DB_USER: cvapp
+      DB_PASSWORD: pw
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-123}
+      CLERK_JWT_KEY: ${CLERK_JWT_KEY:-}
+      CLERK_AUTHORIZED_PARTIES: ${CLERK_AUTHORIZED_PARTIES:-http://localhost:5173}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  postgres:
+    image: postgres:16
+    container_name: cvapp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cvapp
+      POSTGRES_PASSWORD: pw
+      POSTGRES_DB: cvapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - cvapp_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cvapp -d cvapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer
+    container_name: cvapp-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  cvapp_postgres_data:

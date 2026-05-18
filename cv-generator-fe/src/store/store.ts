@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 
+import { apiClient } from "../api/client";
 import cvGenerationReducer from "../features/cvGeneration/cvGenerationSlice";
 
 export const store = configureStore({
@@ -8,6 +9,9 @@ export const store = configureStore({
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
+      thunk: {
+        extraArgument: apiClient,
+      },
       serializableCheck: {
         ignoredActionPaths: ["meta.arg"],
       },

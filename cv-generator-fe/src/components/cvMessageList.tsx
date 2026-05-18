@@ -1,7 +1,10 @@
 import { useEffect, useRef } from "react";
 
 import { useAppSelector } from "../hooks";
+import { cx } from "../utils/cx";
 import { CvChatMessage } from "./cvChatMessage";
+import styles from "./cvMessageList.module.css";
+import msg from "./cvChatMessage.module.css";
 
 export const CvChatMessageList = () => {
   const { messageHistory, status, error } = useAppSelector((s) => s.cvGeneration);
@@ -15,8 +18,8 @@ export const CvChatMessageList = () => {
   }, [messageHistory.length, status]);
 
   return (
-    <div ref={containerRef} className="cv-chat-message-list">
-      <ul className="message-history">
+    <div ref={containerRef} className={styles.list}>
+      <ul className={styles.history}>
         {messageHistory.map((message, index) => (
           <li key={index}>
             <CvChatMessage message={message} />
@@ -24,7 +27,7 @@ export const CvChatMessageList = () => {
         ))}
         {status === "loading" ? (
           <li>
-            <div className="cv-chat-message assistant cv-chat-thinking">
+            <div className={cx(msg.bubble, msg.assistant, msg.thinking)}>
               <span />
               <span />
               <span />
@@ -33,7 +36,7 @@ export const CvChatMessageList = () => {
         ) : null}
         {status === "failed" && error ? (
           <li>
-            <div className="cv-chat-message assistant cv-chat-error">{error}</div>
+            <div className={cx(msg.bubble, msg.assistant, msg.error)}>{error}</div>
           </li>
         ) : null}
       </ul>

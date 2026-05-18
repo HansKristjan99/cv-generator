@@ -1,12 +1,19 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-import { sendChatMessage } from "../../api/cvChat";
-import type { ChatMessage, GenerateCvResponse, SendChatMessageInput } from "../../types/chat";
+import type { ApiClient } from "../../api/client";
+import type { RootState } from "../../store/store";
+import type {
+  ChatMessage,
+  CvQuestion,
+  GenerateCvResponse,
+  SendChatMessageInput,
+} from "../../types/chat";
 
 type Status = "idle" | "loading" | "succeeded" | "failed";
 
 type CvGenerationState = {
   conversationId: string | null;
+  jobDescription: string;
   messageHistory: ChatMessage[];
   draftMessage: string;
   status: Status;
@@ -16,6 +23,7 @@ type CvGenerationState = {
 
 const initialState: CvGenerationState = {
   conversationId: null,
+  jobDescription: "",
   messageHistory: [],
   draftMessage: "",
   status: "idle",
@@ -26,12 +34,33 @@ const initialState: CvGenerationState = {
 export const sendMessage = createAsyncThunk<
   GenerateCvResponse,
   SendChatMessageInput,
-  { rejectValue: string }
->("cvGeneration/sendMessage", async (input, { rejectWithValue }) => {
+  { extra: ApiClient; rejectValue: string }
+>("cvGeneration/sendMessage", async (input, { extra, rejectWithValue }) => {
   try {
-    return await sendChatMessage(input);
+    return await extra.sendChatMessage(input);
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Unable to send message");
+  }
+});
+
+export const enhanceAnswers = createAsyncThunk<
+  string,
+  CvQuestion[],
+  { extra: ApiClient; state: RootState; rejectValue: string }
+>("cvGeneration/enhanceAnswers", async (questions, { extra, getState, rejectWithValue }) => {
+  const { conversationId, jobDescription } = getState().cvGeneration;
+  if (!conversationId) {
+    return rejectWithValue("No active conversation to enhance.");
+  }
+  try {
+    const { invented_answers } = await extra.inventCvAnswers({
+      conversation_id: conversationId,
+      job_description: jobDescription,
+      questions,
+    });
+    return invented_answers;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Unable to enhance answers");
   }
 });
 
@@ -40,7 +69,8 @@ const appendAssistantMessage = (state: CvGenerationState, payload: GenerateCvRes
     state.messageHistory.push({
       role: "assistant",
       type: "question",
-      content: payload.content.questions.join("\n\n"),
+      content: payload.content.questions.map((q) => q.question).join("\n\n"),
+      questions: payload.content.questions,
     });
     return;
   }
@@ -68,6 +98,9 @@ const cvGenerationSlice = createSlice({
       .addCase(sendMessage.pending, (state, action) => {
         state.status = "loading";
         state.error = null;
+        if (action.meta.arg.jobDescription) {
+          state.jobDescription = action.meta.arg.jobDescription;
+        }
         state.messageHistory.push({
           role: "user",
           type: "text",
@@ -83,6 +116,18 @@ const cvGenerationSlice = createSlice({
       .addCase(sendMessage.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload ?? action.error.message ?? "Unable to send message";
+      })
+      .addCase(enhanceAnswers.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+      })
+      .addCase(enhanceAnswers.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.draftMessage = action.payload;
+      })
+      .addCase(enhanceAnswers.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload ?? action.error.message ?? "Unable to enhance answers";
       });
   },
 });

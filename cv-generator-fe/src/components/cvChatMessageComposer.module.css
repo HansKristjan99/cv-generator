@@ -1,0 +1,54 @@
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--color-rule-soft);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  composes: chip from "../primitives/primitives.module.css";
+}
+
+.inputRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  border-radius: 12px;
+  transition: box-shadow 0.15s ease;
+}
+
+.inputRow:focus-within {
+  box-shadow: var(--focus-ring);
+}
+
+.input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 6px 0;
+  min-height: 40px;
+  max-height: 200px;
+  resize: vertical;
+  line-height: 1.55;
+  font-size: 0.875rem;
+}
+
+.input:focus-visible {
+  box-shadow: none;
+}
+
+.send {
+  composes: btnPrimary from "../primitives/primitives.module.css";
+  border-radius: var(--radius-pill);
+  padding: 9px 18px;
+}

@@ -3,6 +3,7 @@ import { CvChatHeader } from "./cvChatHeader";
 import { CvChatMessageComposer } from "./cvChatMessageComposer";
 import { CvChatSetup } from "./cvChatSetup";
 import { CvChatMessageList } from "./cvMessageList";
+import styles from "./cvChat.module.css";
 
 export const CvChat = () => {
   const { conversationId, messageHistory } = useAppSelector((s) => s.cvGeneration);
@@ -13,7 +14,7 @@ export const CvChat = () => {
   }
 
   return (
-    <div className="cv-chat">
+    <div className={styles.chat}>
       <CvChatHeader />
       <CvChatMessageList />
       <CvChatMessageComposer />

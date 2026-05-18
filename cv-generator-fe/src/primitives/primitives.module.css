@@ -1,0 +1,137 @@
+/*
+ * Soft Lab — shared visual primitives.
+ * Component modules pull these in with `composes: <name> from "..."`.
+ * Keep this file small: only atoms reused across 2+ components belong here.
+ */
+
+/* ---- Card ---- */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* ---- Buttons ---- */
+.btnBase {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-button);
+  padding: 11px 18px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.btnPrimary {
+  composes: btnBase;
+  background: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 14px 30px -16px var(--color-primary);
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: var(--color-primary-deep);
+}
+
+.btnSecondary {
+  composes: btnBase;
+  background: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--color-rule);
+}
+
+.btnSecondary:hover:not(:disabled) {
+  background: var(--color-bg-alt);
+}
+
+/* ---- Pills (status / labels) ---- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--radius-pill);
+  padding: 4px 11px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.pillMint {
+  composes: pill;
+  background: var(--color-mint);
+  color: var(--color-mint-ink);
+}
+
+.pillSky {
+  composes: pill;
+  background: var(--color-sky);
+  color: var(--color-sky-ink-deep);
+}
+
+.pillPeach {
+  composes: pill;
+  background: var(--color-peach);
+  color: var(--color-peach-ink);
+}
+
+/* ---- Chip (interactive suggestion / format tag) ---- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--radius-pill);
+  padding: 5px 11px;
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  color: var(--color-muted-deep);
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+button.chip:hover:not(:disabled) {
+  background: var(--color-bg-alt);
+  border-color: var(--color-panel-rule);
+}
+
+/* ---- Pastel field containers ---- */
+.fieldMint {
+  background: var(--color-mint);
+  border: 1px solid var(--color-mint-deep);
+  border-radius: var(--radius-card);
+}
+
+.fieldSky {
+  background: var(--color-sky);
+  border: 1px solid var(--color-sky-deep);
+  border-radius: var(--radius-card);
+}
+
+/* ---- Misc atoms ---- */
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+  flex-shrink: 0;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-muted);
+}

@@ -1,0 +1,26 @@
+.page {
+  width: min(560px, calc(100% - 64px));
+  margin: 64px auto;
+}
+
+.panel {
+  composes: card from "../primitives/primitives.module.css";
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.6rem;
+  color: var(--color-ink);
+}
+
+.message {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.5;
+}

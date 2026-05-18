@@ -2,6 +2,15 @@ import { type FormEvent, useState } from "react";
 
 import { sendMessage } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
+import { cx } from "../utils/cx";
+import styles from "./cvChatSetup.module.css";
+
+const OPENING_PROMPTS = [
+  "Make it more concise.",
+  "Optimize it for ATS screening.",
+  "Lead with my strongest, most relevant experience.",
+  "Match the tone of the job description.",
+];
 
 export const CvChatSetup = () => {
   const dispatch = useAppDispatch();
@@ -32,61 +41,121 @@ export const CvChatSetup = () => {
   };
 
   return (
-    <form className="cv-chat-setup" onSubmit={onSubmit}>
-      <div className="cv-chat-setup-intro">
-        <h2>Let's tailor your CV</h2>
-        <p>Paste your existing CV (or upload a PDF), drop in the job description, and we'll get going.</p>
+    <form className={styles.setup} onSubmit={onSubmit}>
+      <header className={styles.hero}>
+        <span className={styles.step}>Step 1 of 2</span>
+        <h2 className={styles.heroTitle}>
+          Paste what you have. Hirable does the <em>close reading</em>.
+        </h2>
+        <p className={styles.heroSub}>
+          Drop in your existing CV and the job description. Hirable rereads both like an editor —
+          keeping what fits, sharpening what's vague, and tracing every change back to the listing.
+        </p>
+      </header>
+
+      <div className={styles.grid}>
+        <section className={styles.cvField}>
+          <div className={styles.fieldHead}>
+            <span className={cx(styles.numTile, styles.numTileMint)}>01</span>
+            <label htmlFor="setup-cv-text" className={styles.fieldLabel}>
+              Your CV
+            </label>
+            <span className={cx(styles.required, styles.requiredMint)}>Required</span>
+          </div>
+          <textarea
+            id="setup-cv-text"
+            className={styles.textarea}
+            value={cvText}
+            onChange={(e) => setCvText(e.target.value)}
+            placeholder="Paste the full text of your current CV…"
+            rows={9}
+          />
+          <label htmlFor="setup-cv-file" className={styles.dropzone}>
+            <span className={styles.dropIcon} aria-hidden="true">
+              ↑
+            </span>
+            <span className={styles.dropText}>
+              <span className={styles.dropTitle}>{cvFile ? cvFile.name : "Or drop in a PDF"}</span>
+              <span className={styles.dropHint}>PDF up to 10 MB · Hirable parses it cleanly</span>
+            </span>
+            <span className={styles.dropBrowse}>Browse</span>
+          </label>
+          <input
+            id="setup-cv-file"
+            className={styles.fileInput}
+            type="file"
+            accept="application/pdf,.pdf"
+            onChange={(e) => setCvFile(e.target.files?.[0] ?? null)}
+          />
+        </section>
+
+        <section className={styles.jdField}>
+          <div className={styles.fieldHead}>
+            <span className={cx(styles.numTile, styles.numTileSky)}>02</span>
+            <label htmlFor="setup-job" className={styles.fieldLabel}>
+              Job description
+            </label>
+            <span className={cx(styles.required, styles.requiredSky)}>Required</span>
+          </div>
+          <textarea
+            id="setup-job"
+            className={styles.textarea}
+            value={jobDescription}
+            onChange={(e) => setJobDescription(e.target.value)}
+            placeholder="Paste the job posting here — the fuller the listing, the sharper Hirable gets."
+            rows={13}
+          />
+        </section>
       </div>
 
-      <div className="cv-chat-setup-field">
-        <label htmlFor="setup-cv-text">Your CV</label>
-        <textarea
-          id="setup-cv-text"
-          value={cvText}
-          onChange={(e) => setCvText(e.target.value)}
-          placeholder="Paste your current CV here..."
-          rows={8}
-        />
-        <label htmlFor="setup-cv-file" className="cv-chat-setup-sublabel">Or upload a PDF</label>
-        <input
-          id="setup-cv-file"
-          type="file"
-          accept="application/pdf,.pdf"
-          onChange={(e) => setCvFile(e.target.files?.[0] ?? null)}
-        />
-        {cvFile ? <p className="cv-chat-setup-filename">{cvFile.name}</p> : null}
-      </div>
-
-      <div className="cv-chat-setup-field">
-        <label htmlFor="setup-job">Job description</label>
-        <textarea
-          id="setup-job"
-          value={jobDescription}
-          onChange={(e) => setJobDescription(e.target.value)}
-          placeholder="Paste the job posting here..."
-          rows={8}
-        />
-      </div>
-
-      <div className="cv-chat-setup-field">
-        <label htmlFor="setup-message">Opening message <span className="cv-chat-setup-optional">(optional)</span></label>
+      <section className={styles.optional}>
+        <div className={styles.optionalHead}>
+          <span className={styles.optionalGlyph} aria-hidden="true">
+            iii
+          </span>
+          <span className={styles.optionalLabel}>
+            Opening message <span className={styles.optionalTag}>(optional)</span>
+          </span>
+        </div>
+        <div className={styles.promptChips}>
+          {OPENING_PROMPTS.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              className={styles.promptChip}
+              onClick={() => setOpeningMessage(prompt)}
+            >
+              <span aria-hidden="true">+</span>
+              {prompt}
+            </button>
+          ))}
+        </div>
         <input
           id="setup-message"
+          className={styles.openingInput}
           type="text"
           value={openingMessage}
           onChange={(e) => setOpeningMessage(e.target.value)}
-          placeholder="e.g. Help me write a CV tailored to this job."
+          placeholder="Tell Hirable which angle to chase…"
         />
-      </div>
+      </section>
 
-      <div className="cv-chat-setup-actions">
-        <button type="submit" disabled={!canStart}>
-          {isLoading ? "Starting..." : "Start chat"}
+      <footer className={styles.actions}>
+        <ul className={styles.checks}>
+          <li className={hasCv ? styles.checkOn : styles.checkOff}>
+            <span className={styles.checkBox}>{hasCv ? "✓" : ""}</span>
+            CV added
+          </li>
+          <li className={hasJob ? styles.checkOn : styles.checkOff}>
+            <span className={styles.checkBox}>{hasJob ? "✓" : ""}</span>
+            Job description added
+          </li>
+        </ul>
+        <button type="submit" className={styles.start} disabled={!canStart}>
+          {isLoading ? "Starting…" : "Start the chat →"}
         </button>
-        {!hasCv ? <span className="cv-chat-setup-hint">Add your CV (text or PDF).</span> : null}
-        {!hasJob ? <span className="cv-chat-setup-hint">Add a job description.</span> : null}
-        {error ? <span className="cv-chat-setup-error">{error}</span> : null}
-      </div>
+      </footer>
+      {error ? <p className={styles.error}>{error}</p> : null}
     </form>
   );
 };
