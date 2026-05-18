@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # OpenAI model used for every CV generation, invention, and memory-extraction call.
@@ -8,11 +8,34 @@ MODEL = "gpt-5.4-mini-2026-03-17"
 
 
 class Settings(BaseSettings):
-    database_url: str
+    # Accept either a full DATABASE_URL or individual DB_* parts (as injected by
+    # CDK from the RDS-generated secret).  The validator builds the URL from
+    # parts when DATABASE_URL is not provided directly.
+    database_url: str = ""
+    db_host: str | None = None
+    db_port: int = 5432
+    db_name: str = "cvapp"
+    db_user: str = "cvapp"
+    db_password: str | None = None
+
     log_level: str = "INFO"
     clerk_secret_key: str | None = None
     clerk_jwt_key: str | None = None
     clerk_authorized_parties: Annotated[list[str], NoDecode] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def ensure_database_url(self) -> "Settings":
+        if not self.database_url:
+            if self.db_host and self.db_password:
+                self.database_url = (
+                    f"postgresql+psycopg://{self.db_user}:{self.db_password}"
+                    f"@{self.db_host}:{self.db_port}/{self.db_name}"
+                )
+            else:
+                raise ValueError(
+                    "Set DATABASE_URL, or set DB_HOST + DB_PASSWORD to build it."
+                )
+        return self
 
     @field_validator("clerk_authorized_parties", mode="before")
     @classmethod
