@@ -6,6 +6,16 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 # OpenAI model used for every CV generation, invention, and memory-extraction call.
 MODEL = "gpt-5.4-mini-2026-03-17"
 
+# ---- Cost-guard limits (free tier) ----
+MAX_SESSIONS_PER_MONTH = 3
+MAX_MESSAGES_PER_SESSION = 8
+MAX_INVENTS_PER_MONTH = 6
+MAX_INVENT_QUESTIONS = 10
+MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024  # 3 MB
+MAX_CV_TEXT_CHARS = 30_000
+MAX_JOB_DESCRIPTION_CHARS = 10_000
+MAX_USER_MESSAGE_CHARS = 1_000
+
 
 class Settings(BaseSettings):
     # Accept either a full DATABASE_URL or individual DB_* parts (as injected by
