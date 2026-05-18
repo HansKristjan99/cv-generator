@@ -1,3 +1,4 @@
+import { MAX_MESSAGES_PER_SESSION, MAX_USER_MESSAGE_CHARS } from "../config/limits";
 import { sendMessage, setDraftMessage } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import styles from "./cvChatMessageComposer.module.css";
@@ -11,10 +12,15 @@ const PROMPT_CHIPS = [
 
 export const CvChatMessageComposer = () => {
   const dispatch = useAppDispatch();
-  const { draftMessage, conversationId, status } = useAppSelector((s) => s.cvGeneration);
+  const { draftMessage, conversationId, status, messageHistory } = useAppSelector(
+    (s) => s.cvGeneration,
+  );
 
   const trimmed = draftMessage.trim();
-  const disabled = status === "loading" || !trimmed;
+  const messagesUsed = messageHistory.length;
+  const messagesRemaining = MAX_MESSAGES_PER_SESSION - messagesUsed;
+  const atLimit = messagesRemaining <= 0;
+  const disabled = status === "loading" || !trimmed || atLimit;
 
   const onSend = () => {
     if (disabled) return;
@@ -23,19 +29,25 @@ export const CvChatMessageComposer = () => {
 
   return (
     <div className={styles.composer}>
-      <div className={styles.chips}>
-        {PROMPT_CHIPS.map((chip) => (
-          <button
-            key={chip}
-            type="button"
-            className={styles.chip}
-            onClick={() => dispatch(setDraftMessage(chip))}
-          >
-            <span aria-hidden="true">↳</span>
-            {chip}
-          </button>
-        ))}
-      </div>
+      {atLimit ? (
+        <p className={styles.limitReached}>
+          Message limit reached for this session ({MAX_MESSAGES_PER_SESSION} messages).
+        </p>
+      ) : (
+        <div className={styles.chips}>
+          {PROMPT_CHIPS.map((chip) => (
+            <button
+              key={chip}
+              type="button"
+              className={styles.chip}
+              onClick={() => dispatch(setDraftMessage(chip))}
+            >
+              <span aria-hidden="true">↳</span>
+              {chip}
+            </button>
+          ))}
+        </div>
+      )}
       <div className={styles.inputRow}>
         <textarea
           className={styles.input}
@@ -48,12 +60,19 @@ export const CvChatMessageComposer = () => {
               onSend();
             }
           }}
-          placeholder="Ask Hirable to refine further…  (Ctrl/⌘+Enter to send)"
+          placeholder={atLimit ? "Session limit reached." : "Ask Hirable to refine further…  (Ctrl/⌘+Enter to send)"}
+          maxLength={MAX_USER_MESSAGE_CHARS}
+          disabled={atLimit}
         />
         <button type="button" className={styles.send} onClick={onSend} disabled={disabled}>
           Send
         </button>
       </div>
+      {!atLimit && messagesRemaining <= 3 ? (
+        <p className={styles.limitNote}>
+          {messagesRemaining} message{messagesRemaining === 1 ? "" : "s"} remaining in this session
+        </p>
+      ) : null}
     </div>
   );
 };

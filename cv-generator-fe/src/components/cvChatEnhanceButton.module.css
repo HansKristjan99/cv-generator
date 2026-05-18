@@ -19,3 +19,23 @@
   background: var(--color-mint-deep);
   box-shadow: var(--shadow-sm);
 }
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-self: flex-start;
+}
+
+.limitNote {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--color-muted);
+}
+
+.limitReached {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--color-danger);
+  font-weight: 500;
+}

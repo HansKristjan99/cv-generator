@@ -11,6 +11,7 @@ from app.config import settings  # noqa: E402
 from app.db import Base  # noqa: E402
 from app.models import (  # noqa: E402, F401
     Award,
+    CvSession,
     EducationExperience,
     JobExperience,
     JobExperienceBullet,

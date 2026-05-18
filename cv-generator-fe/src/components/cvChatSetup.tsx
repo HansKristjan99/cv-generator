@@ -1,5 +1,12 @@
 import { type FormEvent, useState } from "react";
 
+import {
+  MAX_CV_TEXT_CHARS,
+  MAX_FILE_SIZE_BYTES,
+  MAX_FILE_SIZE_MB,
+  MAX_JOB_DESCRIPTION_CHARS,
+  MAX_SESSIONS_PER_MONTH,
+} from "../config/limits";
 import { sendMessage } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { cx } from "../utils/cx";
@@ -14,17 +21,31 @@ const OPENING_PROMPTS = [
 
 export const CvChatSetup = () => {
   const dispatch = useAppDispatch();
-  const { status, error } = useAppSelector((s) => s.cvGeneration);
+  const { status, error, monthlySessionsUsed } = useAppSelector((s) => s.cvGeneration);
 
   const [cvText, setCvText] = useState("");
   const [cvFile, setCvFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [openingMessage, setOpeningMessage] = useState("");
 
   const isLoading = status === "loading";
   const hasCv = Boolean(cvText.trim() || cvFile);
   const hasJob = Boolean(jobDescription.trim());
-  const canStart = hasCv && hasJob && !isLoading;
+  const sessionsRemaining =
+    monthlySessionsUsed !== null ? MAX_SESSIONS_PER_MONTH - monthlySessionsUsed : null;
+  const atSessionLimit = sessionsRemaining !== null && sessionsRemaining <= 0;
+  const canStart = hasCv && hasJob && !isLoading && !atSessionLimit && !fileError;
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    if (f && f.size > MAX_FILE_SIZE_BYTES) {
+      setFileError(`File too large. Maximum size is ${MAX_FILE_SIZE_MB} MB.`);
+      return;
+    }
+    setFileError(null);
+    setCvFile(f);
+  };
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -69,6 +90,7 @@ export const CvChatSetup = () => {
             onChange={(e) => setCvText(e.target.value)}
             placeholder="Paste the full text of your current CV…"
             rows={9}
+            maxLength={MAX_CV_TEXT_CHARS}
           />
           <label htmlFor="setup-cv-file" className={styles.dropzone}>
             <span className={styles.dropIcon} aria-hidden="true">
@@ -76,7 +98,9 @@ export const CvChatSetup = () => {
             </span>
             <span className={styles.dropText}>
               <span className={styles.dropTitle}>{cvFile ? cvFile.name : "Or drop in a PDF"}</span>
-              <span className={styles.dropHint}>PDF up to 10 MB · Hirable parses it cleanly</span>
+              <span className={styles.dropHint}>
+                PDF up to {MAX_FILE_SIZE_MB} MB · Hirable parses it cleanly
+              </span>
             </span>
             <span className={styles.dropBrowse}>Browse</span>
           </label>
@@ -85,8 +109,9 @@ export const CvChatSetup = () => {
             className={styles.fileInput}
             type="file"
             accept="application/pdf,.pdf"
-            onChange={(e) => setCvFile(e.target.files?.[0] ?? null)}
+            onChange={onFileChange}
           />
+          {fileError ? <p className={styles.fieldError}>{fileError}</p> : null}
         </section>
 
         <section className={styles.jdField}>
@@ -104,6 +129,7 @@ export const CvChatSetup = () => {
             onChange={(e) => setJobDescription(e.target.value)}
             placeholder="Paste the job posting here — the fuller the listing, the sharper Hirable gets."
             rows={13}
+            maxLength={MAX_JOB_DESCRIPTION_CHARS}
           />
         </section>
       </div>
@@ -151,9 +177,18 @@ export const CvChatSetup = () => {
             Job description added
           </li>
         </ul>
-        <button type="submit" className={styles.start} disabled={!canStart}>
-          {isLoading ? "Starting…" : "Start the chat →"}
-        </button>
+        <div className={styles.startGroup}>
+          {sessionsRemaining !== null ? (
+            <p className={atSessionLimit ? styles.quotaExhausted : styles.quotaNote}>
+              {atSessionLimit
+                ? `Monthly limit reached (${MAX_SESSIONS_PER_MONTH} sessions used).`
+                : `${sessionsRemaining} of ${MAX_SESSIONS_PER_MONTH} sessions remaining this month`}
+            </p>
+          ) : null}
+          <button type="submit" className={styles.start} disabled={!canStart}>
+            {isLoading ? "Starting…" : "Start the chat →"}
+          </button>
+        </div>
       </footer>
       {error ? <p className={styles.error}>{error}</p> : null}
     </form>

@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
+import type { CvQuota } from "../../api/cv-chat/quota";
 import type { ApiClient } from "../../api/client";
 import type { RootState } from "../../store/store";
 import type {
@@ -19,6 +20,8 @@ type CvGenerationState = {
   status: Status;
   error: string | null;
   latestPdfBase64: string | null;
+  monthlySessionsUsed: number | null;
+  monthlyInventsUsed: number | null;
 };
 
 const initialState: CvGenerationState = {
@@ -29,7 +32,14 @@ const initialState: CvGenerationState = {
   status: "idle",
   error: null,
   latestPdfBase64: null,
+  monthlySessionsUsed: null,
+  monthlyInventsUsed: null,
 };
+
+export const fetchQuota = createAsyncThunk<CvQuota, void, { extra: ApiClient }>(
+  "cvGeneration/fetchQuota",
+  async (_, { extra }) => extra.getCvQuota(),
+);
 
 export const sendMessage = createAsyncThunk<
   GenerateCvResponse,
@@ -89,12 +99,20 @@ const cvGenerationSlice = createSlice({
     setDraftMessage(state, action: PayloadAction<string>) {
       state.draftMessage = action.payload;
     },
-    resetChat() {
-      return initialState;
+    resetChat(state) {
+      return {
+        ...initialState,
+        monthlySessionsUsed: state.monthlySessionsUsed,
+        monthlyInventsUsed: state.monthlyInventsUsed,
+      };
     },
   },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchQuota.fulfilled, (state, action) => {
+        state.monthlySessionsUsed = action.payload.sessions_used;
+        state.monthlyInventsUsed = action.payload.invents_used;
+      })
       .addCase(sendMessage.pending, (state, action) => {
         state.status = "loading";
         state.error = null;
@@ -110,7 +128,11 @@ const cvGenerationSlice = createSlice({
       })
       .addCase(sendMessage.fulfilled, (state, action) => {
         state.status = "succeeded";
+        const isNewSession = action.meta.arg.conversationId === null;
         state.conversationId = action.payload.conversation_id;
+        if (isNewSession && state.monthlySessionsUsed !== null) {
+          state.monthlySessionsUsed += 1;
+        }
         appendAssistantMessage(state, action.payload);
       })
       .addCase(sendMessage.rejected, (state, action) => {
@@ -124,6 +146,9 @@ const cvGenerationSlice = createSlice({
       .addCase(enhanceAnswers.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.draftMessage = action.payload;
+        if (state.monthlyInventsUsed !== null) {
+          state.monthlyInventsUsed += 1;
+        }
       })
       .addCase(enhanceAnswers.rejected, (state, action) => {
         state.status = "failed";
