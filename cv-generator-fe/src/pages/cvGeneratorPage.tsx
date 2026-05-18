@@ -1,12 +1,19 @@
+import { useEffect } from "react";
+
 import { CvChat } from "../components/cvChat";
 import { CvPdfPane } from "../components/cvPdfPane";
-import { resetChat } from "../features/cvGeneration/cvGenerationSlice";
+import { fetchQuota, resetChat } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { cx } from "../utils/cx";
 import styles from "./cvGeneratorPage.module.css";
 
 export function CvGeneratorPage() {
   const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    void dispatch(fetchQuota());
+  }, [dispatch]);
+
   const { conversationId, messageHistory, latestPdfBase64 } = useAppSelector(
     (s) => s.cvGeneration,
   );

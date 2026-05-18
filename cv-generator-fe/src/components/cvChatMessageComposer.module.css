@@ -52,3 +52,17 @@
   border-radius: var(--radius-pill);
   padding: 9px 18px;
 }
+
+.limitNote {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  text-align: right;
+}
+
+.limitReached {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-danger);
+  font-weight: 500;
+}
