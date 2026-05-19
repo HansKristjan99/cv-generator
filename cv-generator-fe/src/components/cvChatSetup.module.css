@@ -267,7 +267,7 @@
 .actions {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--space-4);
   flex-wrap: wrap;
   padding-top: var(--space-5);
