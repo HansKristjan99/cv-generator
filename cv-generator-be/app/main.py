@@ -4,7 +4,7 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import cv, memory, users
+from app.api import cv, memory, templates, users
 from app.config import settings
 
 _LOG_FORMAT = "%(asctime)s %(levelname)-5s [%(name)s] %(message)s"
@@ -40,6 +40,7 @@ app.add_middleware(
 
 app.include_router(cv.router)
 app.include_router(memory.router)
+app.include_router(templates.router)
 app.include_router(users.router)
 
 

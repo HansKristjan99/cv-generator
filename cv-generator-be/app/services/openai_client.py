@@ -10,7 +10,11 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-ToolHandler = Callable[[str, dict[str, Any]], dict[str, Any]]
+# Tool handlers may return a plain result dict or a (result, pdf_bytes) tuple.
+# When pdf_bytes is present, get_structured_output uploads the PDF to OpenAI
+# and attaches it to the next input turn so the model can review the render.
+ToolHandlerResult = dict[str, Any] | tuple[dict[str, Any], bytes | None]
+ToolHandler = Callable[[str, dict[str, Any]], ToolHandlerResult]
 
 # Soft cap per conversation item so a long transcript (e.g. one carrying compiled
 # CV LaTeX) does not produce an oversized prompt.
@@ -103,14 +107,31 @@ class OpenAIClient:
             logger.info("OpenAI requested %d tool call(s)", len(function_calls))
             if tool_handler is None:
                 raise RuntimeError("Model invoked a tool but no handler was provided")
-            next_input = [
-                {
+            next_input = []
+            for fc in function_calls:
+                raw = tool_handler(fc.name, json.loads(fc.arguments))
+                if isinstance(raw, tuple):
+                    result_dict, pdf_bytes = raw
+                else:
+                    result_dict, pdf_bytes = raw, None
+                next_input.append({
                     "type": "function_call_output",
                     "call_id": fc.call_id,
-                    "output": json.dumps(tool_handler(fc.name, json.loads(fc.arguments))),
-                }
-                for fc in function_calls
-            ]
+                    "output": json.dumps(result_dict),
+                })
+                if pdf_bytes:
+                    try:
+                        uploaded = self.client.files.create(
+                            file=("cv.pdf", pdf_bytes, "application/pdf"),
+                            purpose="user_data",
+                        )
+                        next_input.append({
+                            "role": "user",
+                            "content": [{"type": "input_file", "file_id": uploaded.id}],
+                        })
+                        logger.debug("Uploaded compiled PDF to OpenAI: file_id=%s", uploaded.id)
+                    except Exception:
+                        logger.warning("Failed to upload compiled PDF to OpenAI; continuing without it")
 
         logger.warning("Exhausted %d tool iterations without a final response", max_tool_iterations)
         return (response.output_parsed if response else None), conversation_id

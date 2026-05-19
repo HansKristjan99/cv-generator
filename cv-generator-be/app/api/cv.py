@@ -26,7 +26,7 @@ from app.config import (
     MODEL,
 )
 from app.db import get_db
-from app.models import CvSession, User
+from app.models import CvSession, Template, User
 from app.schemas import (
     CurriculumVitae,
     CVWriterResponse,
@@ -136,23 +136,41 @@ COMPILE_TOOL = {
 }
 
 
-def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
-    logger.debug("Tool call requested: %s", name)
-    if name != "compile_cv_to_pdf":
-        logger.warning("Unknown tool requested by model: %s", name)
-        return {"success": False, "error": f"Unknown tool: {name}"}
-    try:
-        cv = CurriculumVitae(**args)
-    except Exception as e:
-        logger.warning("Invalid CV payload from model tool call: %s", e)
-        return {"success": False, "error": f"Invalid CV payload: {e}"}
-    result = compile_latex_to_pdf(cv_to_latex(cv))
-    logger.info("compile_cv_to_pdf -> success=%s page_count=%s", result.success, result.page_count)
-    return {
-        "success": result.success,
-        "page_count": result.page_count,
-        "error": result.error[:_TOOL_ERROR_CAP] if result.error else None,
-    }
+def _make_tool_handler(template_slug: str) -> Any:
+    def _handle_tool(name: str, args: dict[str, Any]) -> tuple[dict[str, Any], bytes | None]:
+        logger.debug("Tool call requested: %s", name)
+        if name != "compile_cv_to_pdf":
+            logger.warning("Unknown tool requested by model: %s", name)
+            return {"success": False, "error": f"Unknown tool: {name}"}, None
+        try:
+            cv = CurriculumVitae(**args)
+        except Exception as e:
+            logger.warning("Invalid CV payload from model tool call: %s", e)
+            return {"success": False, "error": f"Invalid CV payload: {e}"}, None
+        result = compile_latex_to_pdf(cv_to_latex(cv, template_slug))
+        logger.info("compile_cv_to_pdf -> success=%s page_count=%s", result.success, result.page_count)
+        return {
+            "success": result.success,
+            "page_count": result.page_count,
+            "error": result.error[:_TOOL_ERROR_CAP] if result.error else None,
+        }, result.pdf_bytes if result.success else None
+    return _handle_tool
+
+
+def _resolve_template_slug(
+    template_id: str | None,
+    user: User,
+    db: Session,
+) -> str:
+    if template_id:
+        tmpl = db.query(Template).filter(Template.id == template_id).first()
+        if tmpl:
+            return tmpl.slug
+    if user.preferred_template_id:
+        tmpl = db.query(Template).filter(Template.id == user.preferred_template_id).first()
+        if tmpl:
+            return tmpl.slug
+    return "default"
 
 
 @router.post("/generate/", response_model=GenerateCVResponse)
@@ -164,17 +182,19 @@ async def generate_cv(
     job_description: str | None = Form(None),
     file: UploadFile | None = File(None),
     conversation_id: str | None = Form(None),
+    template_id: str | None = Form(None),
 ) -> GenerateCVResponse:
     file_path: Path | None = None
     cv_session: CvSession | None = None
 
     logger.info(
-        "generate_cv user=%s conversation_id=%s has_text=%s has_file=%s has_job_description=%s",
+        "generate_cv user=%s conversation_id=%s has_text=%s has_file=%s has_job_description=%s template_id=%s",
         current_user.id,
         conversation_id,
         bool(text),
         file is not None,
         bool(job_description),
+        template_id,
     )
 
     if conversation_id is None:
@@ -225,7 +245,8 @@ async def generate_cv(
         db.commit()
         prompt_input = user_message
 
-    logger.debug("Calling OpenAI for CV generation (model=%s)", MODEL)
+    template_slug = _resolve_template_slug(template_id, current_user, db)
+    logger.debug("Calling OpenAI for CV generation (model=%s, template=%s)", MODEL, template_slug)
     client = OpenAIClient(MODEL)
     response, conversation_id = client.get_structured_output(
         prompt_input,
@@ -234,7 +255,7 @@ async def generate_cv(
         file=file_path,
         conversation_id=conversation_id,
         tools=[COMPILE_TOOL],
-        tool_handler=_handle_tool,
+        tool_handler=_make_tool_handler(template_slug),
     )
 
     # Stamp real conversation_id onto the pre-inserted slot (new sessions only)
@@ -267,7 +288,7 @@ async def generate_cv(
             content=CvQuestionResponse(questions=response.content.questions),
         )
 
-    latex = cv_to_latex(response.content)
+    latex = cv_to_latex(response.content, template_slug)
     final = compile_latex_to_pdf(latex)
     if not final.success:
         logger.error("Final CV compilation failed: %s", final.error)

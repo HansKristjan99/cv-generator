@@ -3,6 +3,8 @@ import { sendChatMessage } from "./cv-chat/cvChat";
 import { inventCvAnswers } from "./cv-chat/inventAnswers";
 import { getCvQuota } from "./cv-chat/quota";
 import { getUserMemory, updateUserMemory } from "./user-memory/userMemory";
+import { getTemplates } from "./templates/getTemplates";
+import { getUserSettings, updateUserSettings } from "./user-settings/userSettings";
 
 export const apiClient = {
   registerCurrentUser,
@@ -11,6 +13,9 @@ export const apiClient = {
   getCvQuota,
   getUserMemory,
   updateUserMemory,
+  getTemplates,
+  getUserSettings,
+  updateUserSettings,
 };
 
 export type ApiClient = typeof apiClient;

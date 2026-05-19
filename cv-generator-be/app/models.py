@@ -10,6 +10,16 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base
 
 
+class Template(Base):
+    __tablename__ = "templates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    slug: Mapped[str] = mapped_column(Text, nullable=False)
+
+    __table_args__ = (UniqueConstraint("slug", name="uq_templates_slug"),)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -17,6 +27,9 @@ class User(Base):
     idp_sub: Mapped[str] = mapped_column(Text, nullable=False)
     email: Mapped[str] = mapped_column(Text, nullable=False)
     memory_conversation_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    preferred_template_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("templates.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
