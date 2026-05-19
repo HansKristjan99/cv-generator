@@ -1,13 +1,13 @@
 .page {
   width: 100%;
-  max-width: 1180px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 56px 56px;
+  padding: 24px 5% 32px;
   transition: max-width 0.25s ease;
 }
 
 .pageWide {
-  max-width: 1480px;
+  max-width: 1600px;
 }
 
 .header {
@@ -63,6 +63,7 @@
 
 .status {
   composes: pillMint from "../primitives/primitives.module.css";
+  padding: 9px 14px;
 }
 
 .statusDot {
@@ -86,7 +87,7 @@
 
 @media (max-width: 1000px) {
   .page {
-    padding: 28px 24px 40px;
+    padding: 20px 20px 32px;
   }
 
   .header {
