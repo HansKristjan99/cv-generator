@@ -2,16 +2,17 @@ import { type ReactNode, useState } from "react";
 import { SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/react";
 
 import { CvGeneratorPage } from "../pages/cvGeneratorPage";
+import { TemplatesPage } from "../pages/templatesPage";
 import { UserMemoryPage } from "../pages/userMemoryPage";
 import { AuthenticatedApiProvider } from "../routes/authenticatedApiProvider";
 import { cx } from "../utils/cx";
 import styles from "./appShell.module.css";
 
-type AppTab = "cv" | "settings" | "user memory";
+type AppTab = "cv" | "templates" | "user memory";
 
 const tabs: Array<{ id: AppTab; label: string; detail: string }> = [
   { id: "cv", label: "Tailor", detail: "Generator" },
-  { id: "settings", label: "Settings", detail: "Preferences" },
+  { id: "templates", label: "Templates", detail: "CV layouts" },
   { id: "user memory", label: "Memory", detail: "Profile data" },
 ];
 
@@ -82,14 +83,20 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
 }
 
 function renderTab(activeTab: AppTab, isLoaded: boolean, isSignedIn: boolean | undefined) {
-  if (activeTab === "settings") {
-    return <Placeholder title="Settings" />;
+  if (activeTab === "templates") {
+    return (
+      <AuthenticatedTab title="Templates" isLoaded={isLoaded} isSignedIn={isSignedIn}>
+        <TemplatesPage />
+      </AuthenticatedTab>
+    );
   }
 
   if (activeTab === "user memory") {
-    return <AuthenticatedTab title="Memory" isLoaded={isLoaded} isSignedIn={isSignedIn}>
-      <UserMemoryPage />
-    </AuthenticatedTab>;
+    return (
+      <AuthenticatedTab title="Memory" isLoaded={isLoaded} isSignedIn={isSignedIn}>
+        <UserMemoryPage />
+      </AuthenticatedTab>
+    );
   }
 
   return (
