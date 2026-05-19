@@ -1,0 +1,9 @@
+name = "cv-generator"
+main = "worker.js"
+compatibility_date = "2026-05-19"
+
+# Serve the Vite build output as static assets.
+# The worker script handles /api/* proxying and SPA fallback.
+[assets]
+directory = "./dist"
+binding = "ASSETS"

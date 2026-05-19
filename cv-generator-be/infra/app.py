@@ -1,4 +1,3 @@
-import os
 import aws_cdk as cdk
 
 from infra.infra_stack import CvGeneratorBeStack
@@ -9,8 +8,8 @@ CvGeneratorBeStack(
     app,
     "CvGeneratorBeStack",
     env=cdk.Environment(
-        account=os.getenv("CDK_DEFAULT_ACCOUNT"),
-        region=os.getenv("CDK_DEFAULT_REGION"),
+        account="643681787037",
+        region="eu-north-1",
     ),
 )
 

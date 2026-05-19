@@ -1,5 +1,0 @@
-# SPA catch-all: any path that doesn't match a static asset serves index.html
-# so React Router can handle client-side navigation.
-# The /api/* proxy is handled by functions/api/[[path]].js (Pages Functions
-# take priority over _redirects rules).
-/*    /index.html    200
