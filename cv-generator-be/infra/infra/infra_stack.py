@@ -101,18 +101,6 @@ class CvGeneratorBeStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
         )
 
-        # Comma-separated list of allowed frontend origins for Clerk JWT validation.
-        # Update with your Cloudflare Pages URL after first deploy, e.g.:
-        #   https://cv-generator.pages.dev,http://localhost:5173
-        clerk_authorized_parties = secretsmanager.Secret(
-            self,
-            "ClerkAuthorizedParties",
-            secret_name="cv-generator/clerk-authorized-parties",
-            description="Comma-separated allowed frontend origins for Clerk JWT",
-            secret_string_value=SecretValue.unsafe_plain_text("http://localhost:5173"),
-            removal_policy=RemovalPolicy.RETAIN,
-        )
-
         cluster = ecs.Cluster(
             self,
             "Cluster",
@@ -158,6 +146,7 @@ class CvGeneratorBeStack(Stack):
                     "DB_PORT": "5432",
                     "DB_NAME": "cvapp",
                     "DB_USER": "cvapp",
+                    "CLERK_AUTHORIZED_PARTIES": "https://hireable.vericodehq.com,http://localhost:5173",
                 },
                 secrets={
                     "DB_PASSWORD": ecs.Secret.from_secrets_manager(
@@ -168,9 +157,6 @@ class CvGeneratorBeStack(Stack):
                     ),
                     "CLERK_JWT_KEY": ecs.Secret.from_secrets_manager(clerk_jwt_key),
                     "OPENAI_API_KEY": ecs.Secret.from_secrets_manager(openai_api_key),
-                    "CLERK_AUTHORIZED_PARTIES": ecs.Secret.from_secrets_manager(
-                        clerk_authorized_parties
-                    ),
                 },
                 log_driver=ecs.LogDrivers.aws_logs(
                     stream_prefix="fastapi",
