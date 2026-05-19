@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-aws_profile="personal"
+aws_profile="hans-admin"
 aws_region="eu-north-1"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

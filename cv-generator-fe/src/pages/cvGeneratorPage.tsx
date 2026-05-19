@@ -33,7 +33,7 @@ export function CvGeneratorPage() {
           </div>
           <h1 className={styles.title}>Tailor your CV</h1>
           <p className={styles.subtitle}>
-            Match your CV to the role — Hirable reads both and sharpens what lands.
+            Chat with Hirable to refine your CV for a specific job.
           </p>
         </div>
         <div className={styles.headerActions}>

@@ -2,7 +2,6 @@
   composes: card from "../primitives/primitives.module.css";
   display: flex;
   flex-direction: column;
-  height: calc(90vh - 160px);
-  min-height: 480px;
+  height: var(--pane-height);
   overflow: hidden;
 }

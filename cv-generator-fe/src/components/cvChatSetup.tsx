@@ -66,7 +66,7 @@ export const CvChatSetup = () => {
       <header className={styles.hero}>
         <span className={styles.step}>Step 1 of 2</span>
         <h2 className={styles.heroTitle}>
-          Fine-tune your CV for the role. Hirable does the <em>close reading</em>.
+          Paste what you have. Hirable does the <em>close reading</em>.
         </h2>
         <p className={styles.heroSub}>
           Drop in your existing CV and the job description. Hirable rereads both like an editor —
@@ -167,6 +167,16 @@ export const CvChatSetup = () => {
       </section>
 
       <footer className={styles.actions}>
+        <ul className={styles.checks}>
+          <li className={hasCv ? styles.checkOn : styles.checkOff}>
+            <span className={styles.checkBox}>{hasCv ? "✓" : ""}</span>
+            CV added
+          </li>
+          <li className={hasJob ? styles.checkOn : styles.checkOff}>
+            <span className={styles.checkBox}>{hasJob ? "✓" : ""}</span>
+            Job description added
+          </li>
+        </ul>
         <div className={styles.startGroup}>
           {sessionsRemaining !== null ? (
             <p className={atSessionLimit ? styles.quotaExhausted : styles.quotaNote}>

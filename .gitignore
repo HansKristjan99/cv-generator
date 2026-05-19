@@ -9,7 +9,6 @@
 .env
 .env.*
 !.env.example
-!.env.production
 
 # Python (cv-generator-be)
 __pycache__/

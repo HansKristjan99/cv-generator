@@ -3,130 +3,169 @@
 ## How requests work in production
 
 ```
-Browser → https://hireable.vericodehq.com  (Cloudflare Worker, static assets)
-       → https://api.vericodehq.com        (Cloudflare proxy → HTTP ALB → Fargate)
+Browser → https://cv-generator.pages.dev/api/cv/generate/
+              ↓  Pages Function (functions/api/[[path]].js)
+          http://<ALB_DNS>/cv/generate/   ← AWS Fargate backend
 ```
 
-`VITE_API_BASE_URL` is baked into the build via `.env.production` —
-no environment variables need to be set in the Cloudflare dashboard.
-Cloudflare terminates TLS for `api.vericodehq.com` for free; the ALB
-stays plain HTTP internally.
+All `/api/*` requests are proxied at the Cloudflare edge by the Pages Function.  
+The browser only ever talks to your Pages domain — no CORS changes needed on the backend.
 
 ---
 
-## Step 1 — Add the API subdomain in Cloudflare DNS
+## Prerequisites
 
-In **dash.cloudflare.com → vericodehq.com → DNS → Records → Add record**:
-
-| Type | Name | Target | Proxy |
-|---|---|---|---|
-| CNAME | `api` | `<LoadBalancerDNS from cdk deploy output>` | **Proxied** (orange cloud) |
-
-The orange cloud is required — Cloudflare issues the TLS cert for
-`api.vericodehq.com` and forwards traffic to the HTTP ALB internally.
+- AWS backend deployed (`cdk deploy` completed in `cv-generator-be/infra/`)
+- A Cloudflare account
+- Your Clerk publishable key (starts with `pk_live_` or `pk_test_`)
 
 ---
 
-## Step 2 — Deploy the backend (`cdk deploy`)
 
-```bash
-cd cv-generator-be/infra
-uv run cdk deploy --profile hans-admin
+## Step 1 — Note the CDK outputs
+
+After `cdk deploy` prints something like:
+
+```
+Outputs:
+CvGeneratorBeStack.LoadBalancerDNS = CvGeneratorBeStack-ApiService-xxxx.eu-north-1.elb.amazonaws.com
+CvGeneratorBeStack.DatabaseEndpoint = cvgenerator-database-xxxx.eu-north-1.rds.amazonaws.com
 ```
 
-Note the `LoadBalancerDNS` output and use it as the CNAME target in Step 1.
+Save the `LoadBalancerDNS` value — that is your `BACKEND_URL`.
 
 ---
 
-## Step 3 — Update Clerk secrets in AWS
+## Step 2 — Create the Cloudflare Pages project
+
+1. Log in to [dash.cloudflare.com](https://dash.cloudflare.com)
+2. **Workers & Pages → Create → Pages → Connect to Git**
+3. Select your `cv-generator` repository
+4. Set build configuration:
+
+   | Setting | Value |
+   |---|---|
+   | Framework preset | Vite |
+   | Build command | `npm run build` |
+   | Build output directory | `dist` |
+   | Root directory | `cv-generator-fe` |
+
+5. Add environment variables (under **Environment variables → Production**):
+
+   | Variable | Value |
+   |---|---|
+   | `VITE_CLERK_PUBLISHABLE_KEY` | Your Clerk publishable key |
+   | `BACKEND_URL` | The `LoadBalancerDNS` value from Step 1 (no trailing slash) |
+
+6. Click **Save and Deploy**.
+
+Cloudflare will build the project and deploy it.  Note the `.pages.dev` URL it assigns — you need it for the next steps.
+
+---
+
+## Step 3 — Manual deploy via Wrangler CLI (alternative to Step 2)
+
+If you prefer the CLI:
 
 ```bash
-# Clerk secret key  (Configure → API keys in the Clerk dashboard)
+cd cv-generator-fe
+
+# Build (Clerk key is embedded at build time)
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_xxx npm run build
+
+# First-time project creation + deploy
+npx wrangler pages deploy dist --project-name cv-generator-fe
+
+# Set BACKEND_URL as a secret (paste ALB DNS when prompted)
+npx wrangler pages secret put BACKEND_URL --project-name cv-generator-fe
+```
+
+For subsequent deploys just run `npm run build && npx wrangler pages deploy dist --project-name cv-generator-fe`.
+
+---
+
+## Step 4 — Update Clerk settings
+
+In your [Clerk dashboard](https://dashboard.clerk.com):
+
+1. Open your application → **Domains**
+2. Add your Pages URL, e.g. `https://cv-generator.pages.dev`
+
+---
+
+## Step 5 — Update CLERK_AUTHORIZED_PARTIES on the backend
+
+The backend validates that JWT tokens come from allowed frontend origins.  
+Now that you know the Pages URL, update the secret:
+
+```bash
+aws secretsmanager update-secret \
+  --secret-id cv-generator/clerk-authorized-parties \
+  --secret-string "https://cv-generator.pages.dev,http://localhost:5173" \
+  --region eu-north-1 \
+  --profile hans-admin
+```
+
+Then force a new ECS deployment so the container picks up the new value:
+
+```bash
+aws ecs update-service \
+  --cluster CvGeneratorBeStack-ClusterEB0386A7-xxxx \
+  --service CvGeneratorBeStack-ApiServicexxxx \
+  --force-new-deployment \
+  --region eu-north-1 \
+  --profile hans-admin
+```
+
+(Find the exact cluster and service names in the ECS console or CloudFormation outputs.)
+
+---
+
+## Step 6 — Update the remaining placeholder secrets
+
+The CDK stack created three secrets with `PLACEHOLDER` values.  
+Set the real values before the app is usable:
+
+```bash
+# Clerk secret key  (Settings → API keys in the Clerk dashboard)
 aws secretsmanager update-secret \
   --secret-id cv-generator/clerk-secret-key \
   --secret-string "sk_live_xxxx" \
   --region eu-north-1 --profile hans-admin
 
-# Clerk JWT public key  (Configure → API keys → Show JWT public key)
-# Leave empty to use network verification via the secret key instead
+# Clerk JWT public key  (Settings → API keys → Show JWT public key)
 aws secretsmanager update-secret \
   --secret-id cv-generator/clerk-jwt-key \
-  --secret-string "" \
+  --secret-string "-----BEGIN PUBLIC KEY-----\nMIIB..." \
   --region eu-north-1 --profile hans-admin
 
-# OpenAI API key
+# OpenAI API key  (platform.openai.com → API keys)
 aws secretsmanager update-secret \
   --secret-id cv-generator/openai-api-key \
   --secret-string "sk-proj-xxxx" \
   --region eu-north-1 --profile hans-admin
-
-# Allowed frontend origins for Clerk JWT validation
-aws secretsmanager update-secret \
-  --secret-id cv-generator/clerk-authorized-parties \
-  --secret-string "https://hireable.vericodehq.com,http://localhost:5173" \
-  --region eu-north-1 --profile hans-admin
 ```
 
-Then force a new ECS deployment to pick up the updated secrets:
+After updating all secrets, force another ECS deployment (Step 5 command above).
+
+---
+
+## Re-deploying the frontend
+
+Every time you push to the connected branch Cloudflare rebuilds automatically.  
+For a manual redeploy: make a commit, or click **Retry deployment** in the Pages dashboard.
+
+---
+
+## Switching your local dev to hit the deployed backend
 
 ```bash
-cluster=$(aws ecs list-clusters --region eu-north-1 --profile hans-admin \
-  --query 'clusterArns[0]' --output text)
-service=$(aws ecs list-services --cluster $cluster --region eu-north-1 \
-  --profile hans-admin --query 'serviceArns[0]' --output text)
-aws ecs update-service --cluster $cluster --service $service \
-  --force-new-deployment --region eu-north-1 --profile hans-admin
-```
+# Create once (gitignored)
+echo "API_BASE_URL=http://CvGeneratorBeStack-ApiService-xxxx.eu-north-1.elb.amazonaws.com" \
+  > cv-generator-fe/.env.remote
 
----
-
-## Step 4 — Create the Cloudflare Worker project
-
-1. **dash.cloudflare.com → Workers & Pages → Create → Worker → Connect to Git**
-2. Select the `cv-generator` repository
-3. Set build configuration:
-
-   | Setting | Value |
-   |---|---|
-   | Build command | `npm run build` |
-   | Deploy command | `npx wrangler deploy` |
-   | Root directory | `cv-generator-fe` |
-
-4. Add one environment variable (build-time):
-
-   | Variable | Value |
-   |---|---|
-   | `VITE_CLERK_PUBLISHABLE_KEY` | Your Clerk publishable key (`pk_live_...`) |
-
-   No `BACKEND_URL` or `VITE_API_BASE_URL` needed — the backend URL is
-   baked into the bundle via `.env.production`.
-
-5. Click **Save and Deploy**.
-
----
-
-## Step 5 — Add Clerk domain
-
-In your [Clerk dashboard](https://dashboard.clerk.com) → **Domains** →
-add `https://hireable.vericodehq.com`.
-
----
-
-## Re-deploying
-
-Push to `main` — Cloudflare rebuilds and deploys automatically.
-
----
-
-## Local development
-
-```bash
-# Hit local Docker Compose backend
-cd cv-generator-fe && npm run dev
-
-# Hit the deployed backend at api.vericodehq.com
+# Then run:
 cd cv-generator-fe && npm run dev:remote
-# (requires .env.remote with API_BASE_URL=https://api.vericodehq.com)
 ```
 
 ---
@@ -135,8 +174,8 @@ cd cv-generator-fe && npm run dev:remote
 
 | Symptom | Likely cause |
 |---|---|
-| API calls fail with CORS error | `clerk-authorized-parties` secret missing `https://hireable.vericodehq.com` |
-| `api.vericodehq.com` not reachable | CNAME not added or Cloudflare proxy not enabled (orange cloud) |
-| Clerk sign-in fails | Domain not added in Clerk dashboard, or secrets still have `PLACEHOLDER` |
-| `/app` returns 404 on hard refresh | Worker SPA fallback not working — check `worker.js` is deployed |
-| Backend starts but crashes | Secrets still have `PLACEHOLDER` values — complete Step 3 |
+| API calls return 502/504 | `BACKEND_URL` wrong or ALB not reachable — check Pages Function logs |
+| Clerk sign-in fails | Pages URL not in Clerk **Domains**, or `VITE_CLERK_PUBLISHABLE_KEY` wrong |
+| Auth errors after sign-in | `CLERK_AUTHORIZED_PARTIES` not updated (Step 5) |
+| `/app` returns 404 on hard refresh | `public/_redirects` not in the build output — confirm `dist/_redirects` exists |
+| Backend starts but crashes | Secrets still have `PLACEHOLDER` values — complete Step 6 |

@@ -255,7 +255,7 @@ export function UserMemoryPage() {
           </div>
           <h1 className={styles.title}>Memory</h1>
           <p className={styles.subtitle}>
-            Everything Hirable knows about you — edit, add, or remove at any time.
+            Edit the facts Hirable can reuse when tailoring your CV.
           </p>
         </div>
         <span className={styles.status}>
@@ -319,36 +319,26 @@ function renderJobSection(
           const isOpen = editor?.kind === "job_experiences" && editor.id === job.id;
           if (isOpen) return renderJobEditor(editor, setEditor, saveEditor, removeItem, saving);
           return (
-            <div key={job.id} className={styles.itemCard}>
-              <button
-                type="button"
-                className={styles.itemCardEdit}
-                onClick={() =>
-                  setEditor({
-                    kind: "job_experiences",
-                    id: job.id,
-                    draft: jobToDraft(job),
-                    removedChildIds: [],
-                  })
-                }
-              >
-                <CollapsedItem
-                  title={job.job_title}
-                  meta={[job.company_name, job.location, dates(job.start_date, job.end_date)]
-                    .filter(Boolean)
-                    .join(" · ")}
-                />
-              </button>
-              <button
-                type="button"
-                className={styles.itemCardDelete}
-                onClick={() => void removeItem("job_experiences", job.id)}
-                disabled={saving}
-                aria-label="Delete"
-              >
-                ×
-              </button>
-            </div>
+            <button
+              key={job.id}
+              type="button"
+              className={styles.itemCard}
+              onClick={() =>
+                setEditor({
+                  kind: "job_experiences",
+                  id: job.id,
+                  draft: jobToDraft(job),
+                  removedChildIds: [],
+                })
+              }
+            >
+              <CollapsedItem
+                title={job.job_title}
+                meta={[job.company_name, job.location, dates(job.start_date, job.end_date)]
+                  .filter(Boolean)
+                  .join(" · ")}
+              />
+            </button>
           );
         })}
       </div>
@@ -392,38 +382,28 @@ function renderSkillCategorySection(
             return renderSkillCategoryEditor(editor, setEditor, saveEditor, removeItem, saving);
           }
           return (
-            <div key={category.id} className={styles.itemCard}>
-              <button
-                type="button"
-                className={styles.itemCardEdit}
-                onClick={() =>
-                  setEditor({
-                    kind: "skill_categories",
-                    id: category.id,
-                    draft: skillCategoryToDraft(category),
-                    removedChildIds: [],
-                  })
+            <button
+              key={category.id}
+              type="button"
+              className={styles.itemCard}
+              onClick={() =>
+                setEditor({
+                  kind: "skill_categories",
+                  id: category.id,
+                  draft: skillCategoryToDraft(category),
+                  removedChildIds: [],
+                })
+              }
+            >
+              <CollapsedItem
+                title={category.name}
+                meta={
+                  category.skills.length
+                    ? category.skills.map((skill) => skill.name).join(", ")
+                    : "No skills yet"
                 }
-              >
-                <CollapsedItem
-                  title={category.name}
-                  meta={
-                    category.skills.length
-                      ? category.skills.map((skill) => skill.name).join(", ")
-                      : "No skills yet"
-                  }
-                />
-              </button>
-              <button
-                type="button"
-                className={styles.itemCardDelete}
-                onClick={() => void removeItem("skill_categories", category.id)}
-                disabled={saving}
-                aria-label="Delete"
-              >
-                ×
-              </button>
-            </div>
+              />
+            </button>
           );
         })}
       </div>
@@ -467,31 +447,21 @@ function renderSimpleSection(
             return renderSimpleEditor(section, editor, setEditor, saveEditor, removeItem, saving);
           }
           return (
-            <div key={item.id} className={styles.itemCard}>
-              <button
-                type="button"
-                className={styles.itemCardEdit}
-                onClick={() =>
-                  setEditor({
-                    kind: section.kind,
-                    id: item.id,
-                    draft: simpleToDraft(item, section.fields),
-                    removedChildIds: [],
-                  })
-                }
-              >
-                <CollapsedItem title={section.summary(item)} meta={section.meta(item)} />
-              </button>
-              <button
-                type="button"
-                className={styles.itemCardDelete}
-                onClick={() => void removeItem(section.kind, item.id)}
-                disabled={saving}
-                aria-label="Delete"
-              >
-                ×
-              </button>
-            </div>
+            <button
+              key={item.id}
+              type="button"
+              className={styles.itemCard}
+              onClick={() =>
+                setEditor({
+                  kind: section.kind,
+                  id: item.id,
+                  draft: simpleToDraft(item, section.fields),
+                  removedChildIds: [],
+                })
+              }
+            >
+              <CollapsedItem title={section.summary(item)} meta={section.meta(item)} />
+            </button>
           );
         })}
       </div>

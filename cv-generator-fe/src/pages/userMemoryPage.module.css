@@ -146,57 +146,22 @@
   composes: card from "../primitives/primitives.module.css";
   width: 100%;
   display: flex;
-  flex-direction: row;
-  align-items: stretch;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
   text-align: left;
   transition:
     border-color 0.15s ease,
     background 0.15s ease;
 }
 
-div.itemCard:hover {
+button.itemCard:hover {
   border-color: var(--color-panel-rule);
-}
-
-.itemCardEdit {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px 18px;
-  text-align: left;
-  border-radius: calc(var(--radius-card) - 1px) 0 0 calc(var(--radius-card) - 1px);
-}
-
-button.itemCardEdit:hover {
   background: var(--color-card-alt);
 }
 
-.itemCardDelete {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 16px;
-  border-left: 1px solid var(--color-rule-soft);
-  color: var(--color-muted);
-  font-size: 1.1rem;
-  line-height: 1;
-  border-radius: 0 calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0;
-  transition:
-    color 0.15s ease,
-    background 0.15s ease;
-}
-
-button.itemCardDelete:hover:not(:disabled) {
-  color: var(--color-danger);
-  background: var(--color-danger-soft);
-}
-
 .itemCardOpen {
-  flex-direction: column;
   gap: var(--space-5);
-  padding: var(--space-5);
 }
 
 .itemTitle {
