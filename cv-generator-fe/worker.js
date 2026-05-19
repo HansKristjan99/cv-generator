@@ -9,9 +9,25 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith("/api/")) {
-      const backendUrl = (env.BACKEND_URL ?? "").replace(/\/$/, "");
+      let backendUrl = (env.BACKEND_URL ?? "").replace(/\/$/, "");
+      if (backendUrl && !backendUrl.startsWith("http")) {
+        backendUrl = "http://" + backendUrl;
+      }
       const backendPath = url.pathname.replace(/^\/api/, "");
-      return fetch(new Request(backendUrl + backendPath + url.search, request));
+      const targetUrl = backendUrl + backendPath + url.search;
+
+      const headers = new Headers();
+      for (const [key, value] of request.headers) {
+        if (!key.startsWith("cf-") && key !== "host") {
+          headers.set(key, value);
+        }
+      }
+
+      return fetch(targetUrl, {
+        method: request.method,
+        headers,
+        body: ["GET", "HEAD"].includes(request.method) ? undefined : request.body,
+      });
     }
 
     const response = await env.ASSETS.fetch(request);
