@@ -57,10 +57,12 @@ def _month_start() -> datetime:
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
-def _check_session_available(user_id: Any, db: Session) -> None:
+def _check_session_available(user: User, db: Session) -> None:
+    if user.is_unlimited:
+        return
     count = db.scalar(
         select(func.count(CvSession.id)).where(
-            CvSession.user_id == user_id,
+            CvSession.user_id == user.id,
             CvSession.created_at >= _month_start(),
         )
     ) or 0
@@ -68,16 +70,16 @@ def _check_session_available(user_id: Any, db: Session) -> None:
         raise HTTPException(429, f"Monthly limit of {MAX_SESSIONS_PER_MONTH} CV sessions reached.")
 
 
-def _get_session_for_followup(conversation_id: str, user_id: Any, db: Session) -> CvSession:
+def _get_session_for_followup(conversation_id: str, user: User, db: Session) -> CvSession:
     session = db.scalar(
         select(CvSession).where(
             CvSession.conversation_id == conversation_id,
-            CvSession.user_id == user_id,
+            CvSession.user_id == user.id,
         )
     )
     if session is None:
         raise HTTPException(404, "Unknown or expired conversation.")
-    if session.message_count >= MAX_MESSAGES_PER_SESSION:
+    if not user.is_unlimited and session.message_count >= MAX_MESSAGES_PER_SESSION:
         raise HTTPException(429, f"Conversation limit of {MAX_MESSAGES_PER_SESSION} messages reached.")
     return session
 
@@ -94,10 +96,12 @@ def _get_session_for_invent(conversation_id: str, user_id: Any, db: Session) -> 
     return session
 
 
-def _check_invent_available(user_id: Any, db: Session) -> None:
+def _check_invent_available(user: User, db: Session) -> None:
+    if user.is_unlimited:
+        return
     total = db.scalar(
         select(func.sum(CvSession.invent_count)).where(
-            CvSession.user_id == user_id,
+            CvSession.user_id == user.id,
             CvSession.created_at >= _month_start(),
         )
     ) or 0
@@ -210,7 +214,7 @@ async def generate_cv(
             raise HTTPException(413, f"Message exceeds {MAX_USER_MESSAGE_CHARS:,} character limit.")
 
         # Session limit — check then reserve a slot before calling OpenAI
-        _check_session_available(current_user.id, db)
+        _check_session_available(current_user, db)
         cv_session = CvSession(
             user_id=current_user.id,
             conversation_id=f"pending-{uuid4()}",
@@ -239,7 +243,7 @@ async def generate_cv(
         if len(user_message) > MAX_USER_MESSAGE_CHARS:
             raise HTTPException(413, f"Message exceeds {MAX_USER_MESSAGE_CHARS:,} character limit.")
 
-        cv_session = _get_session_for_followup(conversation_id, current_user.id, db)
+        cv_session = _get_session_for_followup(conversation_id, current_user, db)
         # Increment before the call — cost is incurred regardless of outcome
         cv_session.message_count += 1
         db.commit()
@@ -307,10 +311,11 @@ async def generate_cv(
 
 class CvQuota(BaseModel):
     sessions_used: int
-    sessions_limit: int
-    messages_limit: int
+    sessions_limit: int | None
+    messages_limit: int | None
     invents_used: int
-    invents_limit: int
+    invents_limit: int | None
+    is_unlimited: bool
 
 
 @router.get("/quota", response_model=CvQuota)
@@ -328,10 +333,11 @@ def get_quota(user: CurrentUser, db: Annotated[Session, Depends(get_db)]) -> dic
     ) or 0
     return {
         "sessions_used": sessions_used,
-        "sessions_limit": MAX_SESSIONS_PER_MONTH,
-        "messages_limit": MAX_MESSAGES_PER_SESSION,
+        "sessions_limit": None if user.is_unlimited else MAX_SESSIONS_PER_MONTH,
+        "messages_limit": None if user.is_unlimited else MAX_MESSAGES_PER_SESSION,
         "invents_used": invents_used,
-        "invents_limit": MAX_INVENTS_PER_MONTH,
+        "invents_limit": None if user.is_unlimited else MAX_INVENTS_PER_MONTH,
+        "is_unlimited": user.is_unlimited,
     }
 
 
@@ -394,7 +400,7 @@ def invent_cv(
         raise HTTPException(413, f"Job description exceeds {MAX_JOB_DESCRIPTION_CHARS:,} character limit.")
 
     cv_session = _get_session_for_invent(payload.conversation_id, current_user.id, db)
-    _check_invent_available(current_user.id, db)
+    _check_invent_available(current_user, db)
 
     client = OpenAIClient(MODEL)
 

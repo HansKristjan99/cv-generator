@@ -22,6 +22,7 @@ type CvGenerationState = {
   latestPdfBase64: string | null;
   monthlySessionsUsed: number | null;
   monthlyInventsUsed: number | null;
+  isUnlimited: boolean;
 };
 
 const initialState: CvGenerationState = {
@@ -34,6 +35,7 @@ const initialState: CvGenerationState = {
   latestPdfBase64: null,
   monthlySessionsUsed: null,
   monthlyInventsUsed: null,
+  isUnlimited: false,
 };
 
 export const fetchQuota = createAsyncThunk<CvQuota, void, { extra: ApiClient }>(
@@ -104,6 +106,7 @@ const cvGenerationSlice = createSlice({
         ...initialState,
         monthlySessionsUsed: state.monthlySessionsUsed,
         monthlyInventsUsed: state.monthlyInventsUsed,
+        isUnlimited: state.isUnlimited,
       };
     },
   },
@@ -112,6 +115,7 @@ const cvGenerationSlice = createSlice({
       .addCase(fetchQuota.fulfilled, (state, action) => {
         state.monthlySessionsUsed = action.payload.sessions_used;
         state.monthlyInventsUsed = action.payload.invents_used;
+        state.isUnlimited = action.payload.is_unlimited;
       })
       .addCase(sendMessage.pending, (state, action) => {
         state.status = "loading";

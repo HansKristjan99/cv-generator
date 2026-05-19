@@ -6,10 +6,10 @@ import styles from "./cvChatEnhanceButton.module.css";
 
 export const CvChatEnhanceButton = ({ questions }: { questions: CvQuestion[] }) => {
   const dispatch = useAppDispatch();
-  const { status, monthlyInventsUsed } = useAppSelector((s) => s.cvGeneration);
+  const { status, monthlyInventsUsed, isUnlimited } = useAppSelector((s) => s.cvGeneration);
 
   const inventsRemaining =
-    monthlyInventsUsed !== null ? MAX_INVENTS_PER_MONTH - monthlyInventsUsed : null;
+    !isUnlimited && monthlyInventsUsed !== null ? MAX_INVENTS_PER_MONTH - monthlyInventsUsed : null;
   const atLimit = inventsRemaining !== null && inventsRemaining <= 0;
   const loading = status === "loading";
   const disabled = loading || questions.length === 0 || atLimit;

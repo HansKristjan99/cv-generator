@@ -21,7 +21,7 @@ const OPENING_PROMPTS = [
 
 export const CvChatSetup = () => {
   const dispatch = useAppDispatch();
-  const { status, error, monthlySessionsUsed } = useAppSelector((s) => s.cvGeneration);
+  const { status, error, monthlySessionsUsed, isUnlimited } = useAppSelector((s) => s.cvGeneration);
 
   const [cvText, setCvText] = useState("");
   const [cvFile, setCvFile] = useState<File | null>(null);
@@ -33,7 +33,7 @@ export const CvChatSetup = () => {
   const hasCv = Boolean(cvText.trim() || cvFile);
   const hasJob = Boolean(jobDescription.trim());
   const sessionsRemaining =
-    monthlySessionsUsed !== null ? MAX_SESSIONS_PER_MONTH - monthlySessionsUsed : null;
+    !isUnlimited && monthlySessionsUsed !== null ? MAX_SESSIONS_PER_MONTH - monthlySessionsUsed : null;
   const atSessionLimit = sessionsRemaining !== null && sessionsRemaining <= 0;
   const canStart = hasCv && hasJob && !isLoading && !atSessionLimit && !fileError;
 
