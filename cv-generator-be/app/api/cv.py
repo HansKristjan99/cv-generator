@@ -208,6 +208,7 @@ async def generate_cv(
                 file_path = Path(tmp.name)
 
         prompt_input = (
+            f"=== CANDIDATE'S STORED PROFILE ===\n{format_user_data(db, current_user.id)}\n\n"
             f"=== SOURCE TEXT ===\n{text or '(none provided)'}\n\n"
             f"=== JOB DESCRIPTION ===\n{job_description}\n\n"
             f"=== USER MESSAGE ===\n{user_message or 'Help me write a CV tailored to this job.'}"

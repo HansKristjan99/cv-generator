@@ -53,11 +53,6 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
         </nav>
 
         <div className={styles.footerArea}>
-          <div className={styles.houseRules}>
-            <p className={styles.houseQuote}>"Be specific. Be honest. Cut the rest."</p>
-            <p className={styles.houseLabel}>House rules · 1</p>
-          </div>
-
           <div className={styles.account}>
             {!isLoaded ? (
               <p className={styles.status}>Loading…</p>
