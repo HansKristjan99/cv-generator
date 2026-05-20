@@ -2,6 +2,7 @@ import logging
 import time
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import cv, memory, templates, users
 from app.config import settings
@@ -28,6 +29,15 @@ _configure_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.clerk_authorized_parties or ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(cv.router)
 app.include_router(memory.router)
 app.include_router(templates.router)

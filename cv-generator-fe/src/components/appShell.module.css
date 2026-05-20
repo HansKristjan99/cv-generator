@@ -138,30 +138,6 @@
   gap: 14px;
 }
 
-.houseRules {
-  padding: 14px;
-  border-radius: 12px;
-  background: var(--color-mint);
-}
-
-.houseQuote {
-  margin: 0;
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  color: var(--color-mint-ink-deep);
-}
-
-.houseLabel {
-  margin: 6px 0 0;
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 600;
-  color: var(--color-mint-ink);
-}
-
 .account {
   display: flex;
 }
