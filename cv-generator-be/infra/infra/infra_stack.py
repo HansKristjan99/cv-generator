@@ -104,13 +104,11 @@ class CvGeneratorBeStack(Stack):
         # Comma-separated list of allowed frontend origins for Clerk JWT validation.
         # Update with your Cloudflare Pages URL after first deploy, e.g.:
         #   https://cv-generator.pages.dev,http://localhost:5173
-        clerk_authorized_parties = secretsmanager.Secret(
+        # Uses from_secret_name_v2 because the secret was pre-created outside CFN.
+        clerk_authorized_parties = secretsmanager.Secret.from_secret_name_v2(
             self,
             "ClerkAuthorizedParties",
-            secret_name="cv-generator/clerk-authorized-parties",
-            description="Comma-separated allowed frontend origins for Clerk JWT",
-            secret_string_value=SecretValue.unsafe_plain_text("http://localhost:5173"),
-            removal_policy=RemovalPolicy.RETAIN,
+            "cv-generator/clerk-authorized-parties",
         )
 
         cluster = ecs.Cluster(
