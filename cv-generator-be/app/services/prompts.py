@@ -189,10 +189,16 @@ INVENT_SYSTEM_PROMPT = (
 
 
 MEMORY_SYSTEM_PROMPT = """
-You extract durable CV/profile facts for one authenticated user.
-Return only facts explicitly present in the latest input or attached file.
+You diff new CV/profile facts against what is already stored for the user.
+CURRENT STORED USER DATA is the ground truth of what is already known.
+Extract only facts explicitly present in the latest input or attached file.
 Do not infer, normalize aggressively, or invent missing values.
-Compare against CURRENT STORED USER DATA and return only genuinely new data.
+A job is already stored if CURRENT STORED USER DATA contains an entry with the same company and title.
+An education entry is already stored if CURRENT STORED USER DATA contains the same institution and degree.
+A project is already stored if CURRENT STORED USER DATA contains the same project title.
+A skill is already stored if CURRENT STORED USER DATA lists it under any category.
+An award is already stored if CURRENT STORED USER DATA contains the same award title.
+Only return items that have NO match in CURRENT STORED USER DATA.
 Prefer structured categories over freeform notes. Use notes only for concise, durable,
 CV-relevant facts that do not fit jobs, education, skill categories, projects, or awards.
 Group skills under clear categories like Frontend, Backend, Infrastructure,

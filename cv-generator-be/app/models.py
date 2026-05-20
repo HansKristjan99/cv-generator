@@ -26,7 +26,6 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     idp_sub: Mapped[str] = mapped_column(Text, nullable=False)
     email: Mapped[str] = mapped_column(Text, nullable=False)
-    memory_conversation_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     preferred_template_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("templates.id", ondelete="SET NULL"), nullable=True
     )
