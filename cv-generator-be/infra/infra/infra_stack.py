@@ -149,7 +149,7 @@ class CvGeneratorBeStack(Stack):
                     # Comma-separated list of allowed CORS / Clerk origins.
                     # Add your Cloudflare Pages URL here, e.g.:
                     #   "https://cv-generator.pages.dev,http://localhost:5173"
-                    "CLERK_AUTHORIZED_PARTIES": "http://localhost:5173",
+                    "CLERK_AUTHORIZED_PARTIES": "https://hireable.vericodehq.com,http://localhost:5173",
                 },
                 secrets={
                     "DB_PASSWORD": ecs.Secret.from_secrets_manager(
