@@ -6,6 +6,15 @@ export function setAuthTokenProvider(provider: TokenProvider | null) {
   tokenProvider = provider;
 }
 
+// In production VITE_API_BASE_URL is the ALB URL (e.g. http://my-alb.amazonaws.com).
+// In local dev it is empty and the Vite proxy handles /api/* instead.
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
+
+function resolveUrl(input: RequestInfo | URL): RequestInfo | URL {
+  if (!API_BASE || typeof input !== "string") return input;
+  return API_BASE.replace(/\/$/, "") + input.replace(/^\/api/, "");
+}
+
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   if (!tokenProvider) {
     throw new Error("Authentication is not ready");
@@ -19,7 +28,7 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);
 
-  return fetch(input, { ...init, headers });
+  return fetch(resolveUrl(input), { ...init, headers });
 }
 
 export async function readErrorMessage(response: Response): Promise<string> {
