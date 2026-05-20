@@ -84,9 +84,8 @@ def format_user_data(db: Session, user_id: UUID) -> str:
     return "\n\n".join(sections) or "No stored user data yet."
 
 
-def save_new_user_data(db: Session, user: User, data: NewUserData | None, memory_conversation_id: str | None) -> None:
+def save_new_user_data(db: Session, user: User, data: NewUserData | None) -> None:
     changed = False
-    conversation_changed = False
     inserted_jobs = 0
     inserted_bullets = 0
     inserted_education = 0
@@ -94,11 +93,6 @@ def save_new_user_data(db: Session, user: User, data: NewUserData | None, memory
     inserted_skills = 0
     inserted_awards = 0
     inserted_notes = 0
-
-    if memory_conversation_id and user.memory_conversation_id != memory_conversation_id:
-        user.memory_conversation_id = memory_conversation_id
-        changed = True
-        conversation_changed = True
 
     if data is not None:
         logger.info(
@@ -184,9 +178,8 @@ def save_new_user_data(db: Session, user: User, data: NewUserData | None, memory
     try:
         db.commit()
         logger.info(
-            "Memory update committed for user=%s conversation_changed=%s jobs=%d bullets=%d education=%d projects=%d skills=%d awards=%d notes=%d",
+            "Memory update committed for user=%s jobs=%d bullets=%d education=%d projects=%d skills=%d awards=%d notes=%d",
             user.id,
-            conversation_changed,
             inserted_jobs,
             inserted_bullets,
             inserted_education,
@@ -219,20 +212,18 @@ def update_user_memory(
         f"SOURCE CV TEXT, IF PROVIDED:\n{source_text or '(none)'}\n\n"
         f"JOB DESCRIPTION, IF PROVIDED:\n{job_description or '(none)'}"
     )
-    parsed, conversation_id = client.get_structured_output(
+    parsed, _ = client.get_structured_output(
         prompt,
         MemoryExtraction,
         file=file,
         system_prompt=MEMORY_SYSTEM_PROMPT,
-        conversation_id=user.memory_conversation_id,
         max_tool_iterations=1,
     )
     new_data = parsed.new_user_data if parsed else None
     logger.info(
-        "Memory extraction completed for user=%s parsed=%s has_new_data=%s conversation_id_changed=%s",
+        "Memory extraction completed for user=%s parsed=%s has_new_data=%s",
         user.id,
         parsed is not None,
         new_data is not None,
-        bool(conversation_id and conversation_id != user.memory_conversation_id),
     )
-    save_new_user_data(db, user, new_data, conversation_id)
+    save_new_user_data(db, user, new_data)
