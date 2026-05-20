@@ -3,13 +3,16 @@ import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/tool
 import type { CvQuota } from "../../api/cv-chat/quota";
 import type { ApiClient } from "../../api/client";
 import type { AppDispatch, RootState } from "../../store/store";
-import type {
-  ChatMessage,
-  CvQuestion,
-  GenerateCvResponse,
-  LoadConversationResponse,
-  SendChatMessageInput,
-  SessionSummary,
+import {
+  type ChatMessage,
+  type CvQuestion,
+  type GenerateCvResponse,
+  type LoadConversationResponse,
+  type SendChatMessageInput,
+  type SessionSummary,
+  isCvGenerated,
+  isCvQuestions,
+  isOtherText,
 } from "../../types/chat";
 
 type Status = "idle" | "loading" | "succeeded" | "failed";
@@ -133,21 +136,32 @@ export const enhanceAnswers = createAsyncThunk<
 });
 
 const appendAssistantMessage = (state: CvGenerationState, payload: GenerateCvResponse) => {
-  if ("questions" in payload.content) {
+  const content = payload.content;
+  if (isCvQuestions(content)) {
     state.messageHistory.push({
       role: "assistant",
       type: "question",
       content: "",
-      questions: payload.content.questions,
+      questions: content.questions,
     });
     return;
   }
-  state.messageHistory.push({
-    role: "assistant",
-    type: "cv",
-    content: payload.content.latex,
-  });
-  state.latestPdfBase64 = payload.content.pdf_base64 || null;
+  if (isOtherText(content)) {
+    state.messageHistory.push({
+      role: "assistant",
+      type: "text",
+      content: content.text,
+    });
+    return;
+  }
+  if (isCvGenerated(content)) {
+    state.messageHistory.push({
+      role: "assistant",
+      type: "cv",
+      content: content.latex,
+    });
+    state.latestPdfBase64 = content.pdf_base64 || null;
+  }
 };
 
 const cvGenerationSlice = createSlice({
