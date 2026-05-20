@@ -81,7 +81,7 @@ const appendAssistantMessage = (state: CvGenerationState, payload: GenerateCvRes
     state.messageHistory.push({
       role: "assistant",
       type: "question",
-      content: payload.content.questions.map((q) => q.question).join("\n\n"),
+      content: "",
       questions: payload.content.questions,
     });
     return;

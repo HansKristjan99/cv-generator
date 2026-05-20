@@ -59,9 +59,9 @@ class Settings(BaseSettings):
     @field_validator("clerk_jwt_key", mode="before")
     @classmethod
     def normalize_clerk_jwt_key(cls, value: str | None) -> str | None:
-        if isinstance(value, str):
-            return value.replace("\\n", "\n")
-        return value
+        if not value:
+            return None
+        return value.replace("\\n", "\n")
 
     model_config = SettingsConfigDict(
         env_file=(".env", "app/.env"),
