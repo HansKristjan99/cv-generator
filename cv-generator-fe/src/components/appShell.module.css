@@ -130,6 +130,13 @@
   flex-shrink: 0;
 }
 
+/* ---- Recent chats ---- */
+.recentChats {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 /* ---- Sidebar footer ---- */
 .footerArea {
   margin-top: auto;
