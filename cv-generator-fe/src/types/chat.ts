@@ -28,3 +28,29 @@ export type SendChatMessageInput = {
   cvFile?: File | null;
   jobDescription?: string;
 };
+
+export type StartGenerateResponse = {
+  job_id: string;
+  session_id: string;
+  conversation_id: string;
+};
+
+export type JobStatusResponse = {
+  status: "pending" | "running" | "succeeded" | "failed";
+  result: GenerateCvResponse | null;
+  error: string | null;
+};
+
+export type SessionSummary = {
+  id: string;
+  title: string | null;
+  message_count: number;
+  created_at: string;
+};
+
+export type LoadConversationResponse = {
+  conversation_id: string;
+  title: string | null;
+  messages: ChatMessage[];
+  latest_pdf_base64: string | null;
+};

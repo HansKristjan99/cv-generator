@@ -1,10 +1,14 @@
 import { type ReactNode, useState } from "react";
 import { SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/react";
 
+import { ConversationPage } from "../pages/conversationPage";
 import { CvGeneratorPage } from "../pages/cvGeneratorPage";
 import { TemplatesPage } from "../pages/templatesPage";
 import { UserMemoryPage } from "../pages/userMemoryPage";
+import { resetChat } from "../features/cvGeneration/cvGenerationSlice";
+import { useAppDispatch, useAppSelector } from "../hooks";
 import { AuthenticatedApiProvider } from "../routes/authenticatedApiProvider";
+import { RecentChats } from "./recentChats";
 import { cx } from "../utils/cx";
 import styles from "./appShell.module.css";
 
@@ -19,6 +23,17 @@ const tabs: Array<{ id: AppTab; label: string; detail: string }> = [
 export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
   const [activeTab, setActiveTab] = useState<AppTab>(initialTab);
   const { isLoaded, isSignedIn } = useAuth();
+  const dispatch = useAppDispatch();
+  const activeSessionId = useAppSelector((s) => s.cvGeneration.activeSessionId);
+
+  const handleTabClick = (tabId: AppTab) => {
+    setActiveTab(tabId);
+    if (activeSessionId) {
+      dispatch(resetChat());
+    }
+  };
+
+  const showConversation = isSignedIn && Boolean(activeSessionId);
 
   return (
     <div className={styles.shell}>
@@ -33,14 +48,14 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
 
         <nav className={styles.tabs} aria-label="Workspace tabs">
           {tabs.map((tab, index) => {
-            const isActive = activeTab === tab.id;
+            const isActive = !activeSessionId && activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
                 className={cx(styles.tab, isActive && styles.tabActive)}
                 aria-current={isActive ? "page" : undefined}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabClick(tab.id)}
               >
                 <span className={styles.tabNum}>{`0${index + 1}`}</span>
                 <span className={styles.tabText}>
@@ -52,6 +67,12 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
             );
           })}
         </nav>
+
+        {isSignedIn && (
+          <div className={styles.recentChats}>
+            <RecentChats />
+          </div>
+        )}
 
         <div className={styles.footerArea}>
           <div className={styles.account}>
@@ -77,7 +98,15 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
         </div>
       </aside>
 
-      <main className={styles.main}>{renderTab(activeTab, isLoaded, isSignedIn)}</main>
+      <main className={styles.main}>
+        {showConversation ? (
+          <AuthenticatedTab title="Conversation" isLoaded={isLoaded} isSignedIn={isSignedIn}>
+            <ConversationPage />
+          </AuthenticatedTab>
+        ) : (
+          renderTab(activeTab, isLoaded, isSignedIn)
+        )}
+      </main>
     </div>
   );
 }
