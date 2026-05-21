@@ -142,16 +142,34 @@ class OtherMessage(BaseModel):
     )
 
 
-class PolishedCv(BaseModel):
-    """Output of the editorial pass: a corrected, page-count-compliant LaTeX source."""
+class LayoutOverrides(BaseModel):
+    """Knobs the EditorAgent tweaks to fit the CV to target_pages. The historic default
+    is font 10pt / margin 1.2cm / spacing 8pt. All ranges are validated server-side."""
 
-    latex: str = Field(
+    font_size_pt: Literal[9, 10, 11, 12] = Field(
+        ..., description="Body font in pt. 10 is default. Drop to 9 to fit; raise to 11-12 to fill.",
+    )
+    margin_cm: float = Field(
+        ..., ge=0.8, le=2.5,
+        description="Page margin (cm), applied to all sides. 1.2 default; 0.8 to fit, 2.0 to spread.",
+    )
+    section_spacing_pt: int = Field(
+        ..., ge=0, le=14,
+        description="Vertical space (pt) before section headings. 8 default; 0-4 to fit, 10-14 to spread.",
+    )
+
+
+class PolishedCv(BaseModel):
+    """EditorAgent output: revised CV + layout knobs. Server re-renders + recompiles."""
+
+    cv: CurriculumVitae = Field(
         ...,
         description=(
-            "The full revised LaTeX source. Must compile and fit the target page count. "
-            "Preserve every fact, number, date, employer, and title from the input."
+            "Revised CurriculumVitae. Preserve every fact, number, date, employer, "
+            "and title — only edit phrasing, trim or truthfully expand, and reorder."
         ),
     )
+    layout: LayoutOverrides = Field(..., description="Layout knobs applied at render time.")
 
 
 class CVWriterResponse(BaseModel):

@@ -8,11 +8,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from app.schemas import CurriculumVitae
+from app.schemas import CurriculumVitae, LayoutOverrides
 from app.services.templates import default, harvard_classic, rover
 
 logger = logging.getLogger(__name__)
 
+# Only the `default` template honors LayoutOverrides today; the others ignore it.
 _RENDERERS: dict[str, Callable[[CurriculumVitae], str]] = {
     "default": default.cv_to_latex,
     "harvard_classic": harvard_classic.cv_to_latex,
@@ -20,8 +21,14 @@ _RENDERERS: dict[str, Callable[[CurriculumVitae], str]] = {
 }
 
 
-def cv_to_latex(cv: CurriculumVitae, template_slug: str = "default") -> str:
+def cv_to_latex(
+    cv: CurriculumVitae,
+    template_slug: str = "default",
+    layout: LayoutOverrides | None = None,
+) -> str:
     renderer = _RENDERERS.get(template_slug) or _RENDERERS["default"]
+    if renderer is default.cv_to_latex:
+        return renderer(cv, layout)
     return renderer(cv)
 
 

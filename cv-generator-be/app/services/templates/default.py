@@ -1,23 +1,43 @@
 """Default CV template — the original compact single-column layout."""
 
-from app.schemas import Award, CurriculumVitae, Education, JobExperience, Project, SkillSection
+from app.schemas import (
+    Award,
+    CurriculumVitae,
+    Education,
+    JobExperience,
+    LayoutOverrides,
+    Project,
+    SkillSection,
+)
 
-_PREAMBLE = r"""\documentclass[10pt]{article}
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage[english]{babel}
-\usepackage[left=1.2cm,top=1.2cm,right=1.2cm,bottom=1.0cm]{geometry}
-\usepackage[hidelinks]{hyperref}
-\usepackage{parskip}
-\usepackage{xcolor}
-\pagestyle{empty}
-\setlength{\parskip}{0pt}
-\newcommand{\cvsection}[1]{\vspace{8pt}{\large \textbf{#1}}\\[-5pt]{\color{black!35}\hrule height 0.4pt}\vspace{5pt}}
-\newcommand{\cventry}[4]{\textbf{#1} \hfill #2\\\textit{#3} \hfill #4}
-\newenvironment{cvitemize}{\begin{list}{$\bullet$}{\setlength{\itemsep}{0pt}\setlength{\topsep}{2pt}\setlength{\parsep}{1.5pt}\setlength{\leftmargin}{14pt}}}{\end{list}}
-\begin{document}
-\small
-"""
+DEFAULT_LAYOUT = LayoutOverrides(font_size_pt=10, margin_cm=1.2, section_spacing_pt=8)
+
+
+def _preamble(layout: LayoutOverrides) -> str:
+    return (
+        r"\documentclass[" + str(layout.font_size_pt) + r"pt]{article}" + "\n"
+        r"\usepackage[utf8]{inputenc}" + "\n"
+        r"\usepackage[T1]{fontenc}" + "\n"
+        r"\usepackage[english]{babel}" + "\n"
+        r"\usepackage[left=" + f"{layout.margin_cm:.2f}cm"
+        + r",top=" + f"{layout.margin_cm:.2f}cm"
+        + r",right=" + f"{layout.margin_cm:.2f}cm"
+        + r",bottom=" + f"{layout.margin_cm:.2f}cm"
+        + r"]{geometry}" + "\n"
+        r"\usepackage[hidelinks]{hyperref}" + "\n"
+        r"\usepackage{parskip}" + "\n"
+        r"\usepackage{xcolor}" + "\n"
+        r"\pagestyle{empty}" + "\n"
+        r"\setlength{\parskip}{0pt}" + "\n"
+        r"\newcommand{\cvsection}[1]{\vspace{" + str(layout.section_spacing_pt) + r"pt}"
+        + r"{\large \textbf{#1}}\\[-5pt]{\color{black!35}\hrule height 0.4pt}\vspace{5pt}}" + "\n"
+        r"\newcommand{\cventry}[4]{\textbf{#1} \hfill #2\\\textit{#3} \hfill #4}" + "\n"
+        r"\newenvironment{cvitemize}{\begin{list}{$\bullet$}"
+        r"{\setlength{\itemsep}{0pt}\setlength{\topsep}{2pt}\setlength{\parsep}{1.5pt}"
+        r"\setlength{\leftmargin}{14pt}}}{\end{list}}" + "\n"
+        r"\begin{document}" + "\n"
+        r"\small" + "\n"
+    )
 
 _ESCAPE = str.maketrans({
     "&": r"\&",
@@ -92,7 +112,8 @@ def _section(title: str, entries: list[str], sep: str) -> str:
     return f"\\cvsection{{{title}}}\n" + sep.join(entries)
 
 
-def cv_to_latex(cv: CurriculumVitae) -> str:
+def cv_to_latex(cv: CurriculumVitae, layout: LayoutOverrides | None = None) -> str:
+    layout = layout or DEFAULT_LAYOUT
     contact = [_e(cv.location), f"\\href{{mailto:{cv.email}}}{{{_e(cv.email)}}}"]
     if cv.phone:
         contact.append(_e(cv.phone))
@@ -120,4 +141,4 @@ def cv_to_latex(cv: CurriculumVitae) -> str:
     if cv.awards:
         sections.append(_section("Awards and Achievements", [_award(a) for a in cv.awards], "\\\\[3pt]\n"))
 
-    return _PREAMBLE + "\n\n".join(sections) + "\n\n\\end{document}\n"
+    return _preamble(layout) + "\n\n".join(sections) + "\n\n\\end{document}\n"
