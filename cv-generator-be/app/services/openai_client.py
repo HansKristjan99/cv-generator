@@ -72,6 +72,7 @@ class OpenAIClient:
         tools: list[dict] | None = None,
         tool_handler: ToolHandler | None = None,
         max_tool_iterations: int = _MAX_TOOL_ITERATIONS,
+        attachments: list[tuple[str, bytes, str]] | None = None,
     ) -> Tuple[T | None, str]:
         if not conversation_id:
             conversation_id = self.init_conversation(system_prompt or "")
@@ -81,6 +82,12 @@ class OpenAIClient:
             with open(file, "rb") as f:
                 uploaded = self.client.files.create(file=f, purpose="user_data")
             logger.debug("Uploaded file to OpenAI: file_id=%s", uploaded.id)
+            content.append({"type": "input_file", "file_id": uploaded.id})
+        for name, blob, mime in attachments or []:
+            uploaded = self.client.files.create(
+                file=(name, blob, mime), purpose="user_data",
+            )
+            logger.debug("Uploaded inline attachment to OpenAI: file_id=%s name=%s", uploaded.id, name)
             content.append({"type": "input_file", "file_id": uploaded.id})
 
         next_input: list[dict] = [{"role": "user", "content": content}]

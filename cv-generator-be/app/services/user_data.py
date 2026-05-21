@@ -1,4 +1,6 @@
-"""Extract durable profile facts from a conversation and persist them."""
+"""Format the user's stored profile for prompt injection, and run the memory-extraction agent."""
+
+from __future__ import annotations
 
 import logging
 from pathlib import Path
@@ -7,6 +9,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.agents.memory import MemoryAgent
 from app.models import (
     Award,
     EducationExperience,
@@ -18,9 +21,8 @@ from app.models import (
     SkillCategory,
     User,
 )
-from app.schemas import MemoryExtraction, NewUserData
 from app.services.openai_client import OpenAIClient
-from app.services.prompts import MEMORY_SYSTEM_PROMPT
+from app.services.user_memory_writer import save_new_user_data
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +63,7 @@ def format_user_data(db: Session, user_id: UUID) -> str:
         ]))
     if projects:
         sections.append("\n".join(["Projects:"] + [
-            f"- {_line(project.title, project.description, project.link)}"
-            for project in projects
+            f"- {_line(p.title, p.description, p.link)}" for p in projects
         ]))
     if skill_categories:
         lines = ["Skills:"]
@@ -73,125 +74,12 @@ def format_user_data(db: Session, user_id: UUID) -> str:
         sections.append("\n".join(lines))
     if awards:
         sections.append("\n".join(["Awards and Achievements:"] + [
-            f"- {_line(award.title, award.issuer, award.date, award.description, award.link)}"
-            for award in awards
+            f"- {_line(a.title, a.issuer, a.date, a.description, a.link)}" for a in awards
         ]))
     if notes:
-        sections.append("\n".join(["Additional notes:"] + [
-            f"- {note.content}" for note in notes
-        ]))
+        sections.append("\n".join(["Additional notes:"] + [f"- {n.content}" for n in notes]))
 
     return "\n\n".join(sections) or "No stored user data yet."
-
-
-def save_new_user_data(db: Session, user: User, data: NewUserData | None) -> None:
-    changed = False
-    inserted_jobs = 0
-    inserted_bullets = 0
-    inserted_education = 0
-    inserted_projects = 0
-    inserted_skills = 0
-    inserted_awards = 0
-    inserted_notes = 0
-
-    if data is not None:
-        logger.info(
-            "Memory extraction returned rows for user=%s jobs=%d education=%d projects=%d skill_categories=%d awards=%d notes=%d",
-            user.id,
-            len(data.job_experiences),
-            len(data.education_experiences),
-            len(data.projects),
-            len(data.skill_categories),
-            len(data.awards),
-            len(data.notes),
-        )
-        for item in data.job_experiences:
-            if not item.company_name.strip() or not item.job_title.strip():
-                continue
-            job = JobExperience(
-                user_id=user.id,
-                company_name=item.company_name,
-                job_title=item.job_title,
-                start_date=item.start_date,
-                end_date=item.end_date,
-                location=item.location,
-            )
-            db.add(job)
-            db.flush()
-            changed = True
-            inserted_jobs += 1
-            for bullet in item.bullets:
-                if bullet.bullet_points.strip():
-                    db.add(JobExperienceBullet(
-                        user_id=user.id,
-                        job_experience_id=job.id,
-                        bullet_points=bullet.bullet_points,
-                        relevant_technologies=bullet.relevant_technologies,
-                    ))
-                    inserted_bullets += 1
-        for item in data.education_experiences:
-            if item.degree.strip() and item.institution.strip():
-                db.add(EducationExperience(user_id=user.id, **item.model_dump()))
-                changed = True
-                inserted_education += 1
-        for item in data.projects:
-            if item.title.strip():
-                db.add(Project(user_id=user.id, **item.model_dump()))
-                changed = True
-                inserted_projects += 1
-        for category_data in data.skill_categories:
-            if not category_data.name.strip():
-                continue
-            category = SkillCategory(user_id=user.id, name=category_data.name)
-            db.add(category)
-            db.flush()
-            category_has_skill = False
-            for item in category_data.skills:
-                if item.name.strip():
-                    db.add(Skill(
-                        user_id=user.id,
-                        skill_category_id=category.id,
-                        **item.model_dump(),
-                    ))
-                    changed = True
-                    category_has_skill = True
-                    inserted_skills += 1
-            if not category_has_skill:
-                db.delete(category)
-        for item in data.awards:
-            if item.title.strip():
-                db.add(Award(user_id=user.id, **item.model_dump()))
-                changed = True
-                inserted_awards += 1
-        for item in data.notes:
-            if item.content.strip() and len(item.content) <= 600:
-                db.add(MemoryNote(user_id=user.id, content=item.content))
-                changed = True
-                inserted_notes += 1
-    else:
-        logger.info("Memory extraction returned no new user data for user=%s", user.id)
-
-    if not changed:
-        logger.info("Memory update noop for user=%s", user.id)
-        return
-
-    try:
-        db.commit()
-        logger.info(
-            "Memory update committed for user=%s jobs=%d bullets=%d education=%d projects=%d skills=%d awards=%d notes=%d",
-            user.id,
-            inserted_jobs,
-            inserted_bullets,
-            inserted_education,
-            inserted_projects,
-            inserted_skills,
-            inserted_awards,
-            inserted_notes,
-        )
-    except Exception:
-        db.rollback()
-        logger.exception("Memory update DB commit failed for user=%s", user.id)
-        raise
 
 
 def update_user_memory(
@@ -205,25 +93,13 @@ def update_user_memory(
     file: Path | None = None,
 ) -> None:
     logger.info("Updating user memory for user=%s", user.id)
-    prompt = (
-        f"CURRENT STORED USER DATA:\n{format_user_data(db, user.id)}\n\n"
-        f"LATEST USER MESSAGE:\n{user_message}\n\n"
-        f"LATEST ASSISTANT RESPONSE:\n{assistant_response}\n\n"
-        f"SOURCE CV TEXT, IF PROVIDED:\n{source_text or '(none)'}\n\n"
-        f"JOB DESCRIPTION, IF PROVIDED:\n{job_description or '(none)'}"
-    )
-    parsed, _ = client.get_structured_output(
-        prompt,
-        MemoryExtraction,
+    new_data = MemoryAgent(client).extract(
+        stored_user_data=format_user_data(db, user.id),
+        user_message=user_message,
+        assistant_response=assistant_response,
+        source_text=source_text,
+        job_description=job_description,
         file=file,
-        system_prompt=MEMORY_SYSTEM_PROMPT,
-        max_tool_iterations=1,
     )
-    new_data = parsed.new_user_data if parsed else None
-    logger.info(
-        "Memory extraction completed for user=%s parsed=%s has_new_data=%s",
-        user.id,
-        parsed is not None,
-        new_data is not None,
-    )
+    logger.info("Memory extraction done user=%s has_new_data=%s", user.id, new_data is not None)
     save_new_user_data(db, user, new_data)
