@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import logging
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -20,7 +21,8 @@ from app.models import CvSession, Job, Message, User
 from app.schemas import CurriculumVitae, OtherMessage, QuestionsToImproveCv
 from app.services.latex import compile_latex_to_pdf, cv_to_latex
 from app.services.openai_client import OpenAIClient
-from app.services.user_data import update_user_memory
+from app.services.templates.default import DEFAULT_LAYOUT
+from app.services.user_data import format_user_data, update_user_memory
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,7 @@ def _run_writer_and_editor(
     openai_conversation_id: str | None,
     template_slug: str,
     job_description: str | None,
+    memory_provider: Callable[[], str],
 ) -> tuple[PipelineResult, object]:
     """Returns (result, writer_response_content) so the caller can update memory."""
     writer = WriterAgent(client)
@@ -80,14 +83,15 @@ def _run_writer_and_editor(
         return result, content
 
     assert isinstance(content, CurriculumVitae)
-    latex = cv_to_latex(content, template_slug)
-    initial = compile_latex_to_pdf(latex)
+    initial_latex = cv_to_latex(content, template_slug, DEFAULT_LAYOUT)
+    initial = compile_latex_to_pdf(initial_latex)
     if not initial.success:
         logger.error("Initial CV compilation failed: %s", initial.error)
 
-    editor = EditorAgent(client)
-    edit = editor.run(
-        latex=latex,
+    edit = EditorAgent(client, memory_provider=memory_provider).run(
+        cv=content,
+        layout=DEFAULT_LAYOUT,
+        template_slug=template_slug,
         initial_compile=initial,
         target_pages=content.target_pages,
         job_description=job_description,
@@ -140,6 +144,7 @@ def run_pipeline(
             result, writer_content = _run_writer_and_editor(
                 client, prompt_input, file_path, openai_conversation_id,
                 template_slug, job_description,
+                memory_provider=lambda: format_user_data(db, user_id),
             )
 
             cv_session = db.get(CvSession, cv_session_id)
