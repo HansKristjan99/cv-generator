@@ -1,5 +1,5 @@
 export const MAX_SESSIONS_PER_MONTH = 3;
-export const MAX_MESSAGES_PER_SESSION = 8;
+export const MAX_MESSAGES_PER_SESSION = 15;
 export const MAX_INVENTS_PER_MONTH = 6;
 export const MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024;
 export const MAX_FILE_SIZE_MB = 3;
