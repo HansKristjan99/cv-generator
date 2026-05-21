@@ -1,4 +1,4 @@
-"""Read-side routes for CV chat sessions: listing, history, job status, quotas."""
+"""Read-side routes for CV chat sessions: listing, history, quotas."""
 
 import uuid
 from datetime import datetime
@@ -16,14 +16,9 @@ from app.config import (
     MAX_SESSIONS_PER_MONTH,
 )
 from app.db import get_db
-from app.models import CvSession, Job, Message
+from app.models import CvSession, Message
 from app.schemas import QuestionToImproveCv
 from app.services.auth import CurrentUser
-from app.services.generation_pipeline import (
-    CvGeneratedContent,
-    CvQuestionContent,
-    OtherTextContent,
-)
 
 router = APIRouter(prefix="/cv", tags=["cv"])
 
@@ -33,39 +28,13 @@ def _month_start() -> datetime:
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
-class GenerateCVResponse(BaseModel):
-    conversation_id: str
-    content: CvGeneratedContent | CvQuestionContent | OtherTextContent
-
-
-class JobStatusResponse(BaseModel):
-    status: str
-    result: GenerateCVResponse | None = None
-    error: str | None = None
-
-
-@router.get("/jobs/{job_id}", response_model=JobStatusResponse)
-def get_job_status(
-    job_id: uuid.UUID,
-    current_user: CurrentUser,
-    db: Annotated[Session, Depends(get_db)],
-) -> JobStatusResponse:
-    job = db.scalar(select(Job).where(Job.id == job_id, Job.user_id == current_user.id))
-    if job is None:
-        raise HTTPException(404, "Job not found.")
-    result = GenerateCVResponse(**job.result) if job.result else None
-    return JobStatusResponse(status=job.status, result=result, error=job.error)
-
-
 class SessionSummary(BaseModel):
     id: str
-    conversation_id: str
     title: str | None
     message_count: int
+    status: str
+    error: str | None
     created_at: datetime
-    latest_job_id: str | None = None
-    latest_job_status: str | None = None
-    latest_job_error: str | None = None
 
 
 @router.get("/sessions/", response_model=list[SessionSummary])
@@ -79,25 +48,10 @@ def list_sessions(
         .order_by(CvSession.created_at.desc())
         .limit(50)
     ).all()
-
-    latest_jobs: dict[uuid.UUID, Job] = {}
-    session_ids = [s.id for s in sessions]
-    if session_ids:
-        jobs = db.scalars(
-            select(Job)
-            .where(Job.user_id == current_user.id, Job.cv_session_id.in_(session_ids))
-            .order_by(Job.created_at.desc())
-        ).all()
-        for job in jobs:
-            latest_jobs.setdefault(job.cv_session_id, job)
-
     return [
         SessionSummary(
-            id=str(s.id), conversation_id=s.conversation_id, title=s.title,
-            message_count=s.message_count, created_at=s.created_at,
-            latest_job_id=str(latest_jobs[s.id].id) if s.id in latest_jobs else None,
-            latest_job_status=latest_jobs[s.id].status if s.id in latest_jobs else None,
-            latest_job_error=latest_jobs[s.id].error if s.id in latest_jobs else None,
+            id=str(s.id), title=s.title, message_count=s.message_count,
+            status=s.status, error=s.error, created_at=s.created_at,
         )
         for s in sessions
     ]
@@ -111,8 +65,9 @@ class ChatMessageResponse(BaseModel):
 
 
 class LoadConversationResponse(BaseModel):
-    conversation_id: str
     title: str | None
+    status: str
+    error: str | None
     messages: list[ChatMessageResponse]
     latest_pdf_base64: str | None
 
@@ -151,8 +106,9 @@ def get_session_messages(
         for m in msgs
     ]
     return LoadConversationResponse(
-        conversation_id=cv_session.conversation_id,
         title=cv_session.title,
+        status=cv_session.status,
+        error=cv_session.error,
         messages=messages,
         latest_pdf_base64=latest_pdf_base64,
     )

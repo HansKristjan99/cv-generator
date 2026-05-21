@@ -114,11 +114,11 @@ def cv_to_latex(cv: CurriculumVitae) -> str:
     blocks: list[str] = [header]
 
     if cv.experience:
-        entries = f"\n\n\\vspace{{12pt}}\n\n".join(_job(j) for j in cv.experience)
+        entries = "\n\n\\vspace{12pt}\n\n".join(_job(j) for j in cv.experience)
         blocks.append(_section_heading("Experience") + entries)
 
     if cv.education:
-        entries = f"\n\n\\vspace{{12pt}}\n\n".join(_edu(e) for e in cv.education)
+        entries = "\n\n\\vspace{12pt}\n\n".join(_edu(e) for e in cv.education)
         blocks.append(_section_heading("Education") + entries)
 
     if cv.skills:

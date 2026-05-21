@@ -1,4 +1,4 @@
-import { loadConversation, setActiveSession } from "../features/cvGeneration/cvGenerationSlice";
+import { loadConversation } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { cx } from "../utils/cx";
 import styles from "./recentChats.module.css";
@@ -26,9 +26,8 @@ export function RecentChats({ onOpenSession }: { onOpenSession?: () => void }) {
       <ul className={styles.list}>
         {sessions.map((session) => {
           const isActive = session.id === activeSessionId;
-          const showPending =
-            session.latest_job_status === "pending" || session.latest_job_status === "running";
-          const showFailed = session.latest_job_status === "failed";
+          const showPending = session.status === "pending" || session.status === "running";
+          const showFailed = session.status === "failed";
           return (
             <li key={session.id}>
               <button
@@ -40,12 +39,6 @@ export function RecentChats({ onOpenSession }: { onOpenSession?: () => void }) {
                 )}
                 onClick={() => {
                   onOpenSession?.();
-                  dispatch(
-                    setActiveSession({
-                      sessionId: session.id,
-                      conversationId: session.conversation_id,
-                    }),
-                  );
                   if (session.id === activeSessionId) return;
                   void dispatch(loadConversation(session.id));
                 }}

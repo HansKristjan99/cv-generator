@@ -2,8 +2,7 @@ import { authFetch, readErrorMessage } from "../auth-utils/authFetch";
 import type { CvQuestion } from "../../types/chat";
 
 export type InventCvAnswersInput = {
-  conversation_id: string;
-  job_description: string;
+  session_id: string;
   questions: CvQuestion[];
 };
 

@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -21,7 +21,7 @@ from app.config import (
     MAX_USER_MESSAGE_CHARS,
 )
 from app.db import get_db
-from app.models import CvSession, Job, Message, Template, User
+from app.models import CvSession, Message, Template, User
 from app.services.auth import ensure_current_user
 from app.services.generation_pipeline import run_pipeline
 from app.services.user_data import format_user_data
@@ -47,10 +47,10 @@ def _check_session_available(user: User, db: Session) -> None:
         raise HTTPException(429, f"Monthly limit of {MAX_SESSIONS_PER_MONTH} CV sessions reached.")
 
 
-def _get_session(conversation_id: str, user_id: Any, db: Session) -> CvSession:
+def _get_session(session_id: uuid.UUID, user_id: uuid.UUID, db: Session) -> CvSession:
     session = db.scalar(
         select(CvSession).where(
-            CvSession.conversation_id == conversation_id, CvSession.user_id == user_id,
+            CvSession.id == session_id, CvSession.user_id == user_id,
         )
     )
     if session is None:
@@ -71,9 +71,8 @@ def _resolve_template_slug(template_id: str | None, user: User, db: Session) -> 
 
 
 class StartGenerateResponse(BaseModel):
-    job_id: str
     session_id: str
-    conversation_id: str
+    status: str
 
 
 @router.post("/generate/", response_model=StartGenerateResponse, status_code=202)
@@ -85,16 +84,16 @@ async def generate_cv(
     text: str | None = Form(None),
     job_description: str | None = Form(None),
     file: UploadFile | None = File(None),
-    conversation_id: str | None = Form(None),
+    session_id: uuid.UUID | None = Form(None),
     template_id: str | None = Form(None),
 ) -> StartGenerateResponse:
     file_path: Path | None = None
     logger.info(
-        "generate_cv user=%s conversation_id=%s has_text=%s has_file=%s has_jd=%s template_id=%s",
-        current_user.id, conversation_id, bool(text), file is not None, bool(job_description), template_id,
+        "generate_cv user=%s session_id=%s has_text=%s has_file=%s has_jd=%s template_id=%s",
+        current_user.id, session_id, bool(text), file is not None, bool(job_description), template_id,
     )
 
-    if conversation_id is None:
+    if session_id is None:
         if not (text or file) or not job_description:
             raise HTTPException(400, "Provide CV (text or file) and a job description on first turn.")
         if text and len(text) > MAX_CV_TEXT_CHARS:
@@ -105,14 +104,6 @@ async def generate_cv(
             raise HTTPException(413, f"Message exceeds {MAX_USER_MESSAGE_CHARS:,} character limit.")
 
         _check_session_available(current_user, db)
-        cv_session = CvSession(
-            user_id=current_user.id,
-            conversation_id=f"pending-{uuid.uuid4()}",
-            message_count=1,
-        )
-        db.add(cv_session)
-        db.commit()
-
         if file is not None:
             file_bytes = await file.read()
             if len(file_bytes) > MAX_FILE_SIZE_BYTES:
@@ -120,6 +111,14 @@ async def generate_cv(
             with NamedTemporaryFile(delete=False, suffix=Path(file.filename or "").suffix) as tmp:
                 tmp.write(file_bytes)
                 file_path = Path(tmp.name)
+
+        cv_session = CvSession(
+            user_id=current_user.id,
+            conversation_id=f"pending-{uuid.uuid4()}",
+            job_description=job_description,
+            message_count=1,
+            status="pending",
+        )
 
         prompt_input = (
             f"=== CANDIDATE'S STORED PROFILE ===\n{format_user_data(db, current_user.id)}\n\n"
@@ -135,21 +134,28 @@ async def generate_cv(
         if len(user_message) > MAX_USER_MESSAGE_CHARS:
             raise HTTPException(413, f"Message exceeds {MAX_USER_MESSAGE_CHARS:,} character limit.")
 
-        cv_session = _get_session(conversation_id, current_user.id, db)
+        cv_session = _get_session(session_id, current_user.id, db)
+        if cv_session.status in {"pending", "running"}:
+            raise HTTPException(409, "Conversation is still generating.")
+        if cv_session.conversation_id.startswith("pending-"):
+            raise HTTPException(409, "Conversation is not ready for follow-up messages.")
         if not current_user.is_unlimited and cv_session.message_count >= MAX_MESSAGES_PER_SESSION:
             raise HTTPException(429, f"Conversation limit of {MAX_MESSAGES_PER_SESSION} messages reached.")
         cv_session.message_count += 1
-        db.commit()
+        cv_session.status = "pending"
+        cv_session.error = None
 
         prompt_input = user_message
-        openai_conversation_id = conversation_id
+        openai_conversation_id = cv_session.conversation_id
         user_message_text = user_message
-        job_description = None
+        job_description = cv_session.job_description
         text = None
 
     template_slug = _resolve_template_slug(template_id, current_user, db)
-    job = Job(user_id=current_user.id, cv_session_id=cv_session.id, status="pending")
-    db.add(job)
+    cv_session.status = "pending"
+    cv_session.error = None
+    db.add(cv_session)
+    db.flush()
     db.add(Message(
         cv_session_id=cv_session.id,
         role="user",
@@ -159,7 +165,6 @@ async def generate_cv(
 
     background_tasks.add_task(
         run_pipeline,
-        job_id=job.id,
         cv_session_id=cv_session.id,
         user_id=current_user.id,
         prompt_input=prompt_input,
@@ -171,9 +176,8 @@ async def generate_cv(
         cv_text=text,
     )
 
-    logger.info("generate_cv queued job=%s session=%s", job.id, cv_session.id)
+    logger.info("generate_cv queued session=%s", cv_session.id)
     return StartGenerateResponse(
-        job_id=str(job.id),
         session_id=str(cv_session.id),
-        conversation_id=cv_session.conversation_id,
+        status=cv_session.status,
     )

@@ -18,7 +18,7 @@ export const CvChatMessageComposer = () => {
   const dispatch = useAppDispatch();
   const activeConversation = useAppSelector(selectActiveConversation);
   const draftMessage = activeConversation?.draftMessage ?? "";
-  const conversationId = activeConversation?.conversationId ?? null;
+  const sessionId = activeConversation?.activeSessionId ?? null;
   const messageHistory = activeConversation?.messageHistory ?? [];
   const isBusy =
     activeConversation?.generationStatus === "loading" ||
@@ -28,11 +28,11 @@ export const CvChatMessageComposer = () => {
   const messagesUsed = messageHistory.length;
   const messagesRemaining = MAX_MESSAGES_PER_SESSION - messagesUsed;
   const atLimit = messagesRemaining <= 0;
-  const disabled = isBusy || !trimmed || atLimit || !conversationId;
+  const disabled = isBusy || !trimmed || atLimit || !sessionId;
 
   const onSend = () => {
     if (disabled) return;
-    void dispatch(sendMessage({ conversationId, userMessage: trimmed }));
+    void dispatch(sendMessage({ sessionId, userMessage: trimmed }));
   };
 
   return (

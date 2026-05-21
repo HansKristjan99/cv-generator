@@ -1,6 +1,7 @@
 """`/cv/invent/` route — draft fabricated answers to clarifying questions."""
 
 import logging
+import uuid
 from datetime import datetime
 from typing import Annotated
 
@@ -14,7 +15,6 @@ from app.agents.invent import InventAgent
 from app.config import (
     MAX_INVENT_QUESTIONS,
     MAX_INVENTS_PER_MONTH,
-    MAX_JOB_DESCRIPTION_CHARS,
     MODEL,
 )
 from app.db import get_db
@@ -46,8 +46,7 @@ def _check_invent_available(user: User, db: Session) -> None:
 
 
 class InventCvRequest(BaseModel):
-    conversation_id: str
-    job_description: str
+    session_id: uuid.UUID
     questions: list[QuestionToImproveCv]
 
 
@@ -63,34 +62,34 @@ def invent_cv(
 ) -> InventCvResponse:
     """Draft realistic, made-up answers to the clarifying questions from /cv/generate/."""
     logger.info(
-        "invent_cv user=%s conversation_id=%s questions=%d",
-        current_user.id, payload.conversation_id, len(payload.questions),
+        "invent_cv user=%s session_id=%s questions=%d",
+        current_user.id, payload.session_id, len(payload.questions),
     )
-    if not payload.conversation_id.strip():
-        raise HTTPException(400, "conversation_id is required.")
     if not payload.questions:
         raise HTTPException(400, "questions is required.")
     if len(payload.questions) > MAX_INVENT_QUESTIONS:
         raise HTTPException(422, f"Maximum {MAX_INVENT_QUESTIONS} questions per request.")
-    if len(payload.job_description) > MAX_JOB_DESCRIPTION_CHARS:
-        raise HTTPException(413, f"Job description exceeds {MAX_JOB_DESCRIPTION_CHARS:,} character limit.")
 
     cv_session = db.scalar(
         select(CvSession).where(
-            CvSession.conversation_id == payload.conversation_id,
+            CvSession.id == payload.session_id,
             CvSession.user_id == current_user.id,
         )
     )
     if cv_session is None:
         raise HTTPException(404, "Unknown or expired conversation.")
+    if cv_session.conversation_id.startswith("pending-"):
+        raise HTTPException(409, "Conversation is not ready for enhancement.")
+    if not cv_session.job_description:
+        raise HTTPException(409, "This conversation does not have a stored job description.")
     _check_invent_available(current_user, db)
 
     client = OpenAIClient(MODEL)
     try:
-        transcript = client.get_conversation_transcript(payload.conversation_id)
+        transcript = client.get_conversation_transcript(cv_session.conversation_id)
     except openai.NotFoundError as exc:
-        logger.warning("invent_cv could not read conversation %s: %s", payload.conversation_id, exc)
-        raise HTTPException(404, "Unknown or expired conversation_id.") from exc
+        logger.warning("invent_cv could not read conversation %s: %s", cv_session.conversation_id, exc)
+        raise HTTPException(404, "Unknown or expired conversation.") from exc
 
     user_memory = format_user_data(db, current_user.id)
     cv_session.invent_count += 1
@@ -99,7 +98,7 @@ def invent_cv(
     invented = InventAgent(client).run(
         user_memory=user_memory,
         transcript=transcript,
-        job_description=payload.job_description,
+        job_description=cv_session.job_description,
         questions=payload.questions,
     )
     if invented is None:

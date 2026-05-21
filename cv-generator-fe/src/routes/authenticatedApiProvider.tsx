@@ -4,7 +4,12 @@ import { useAuth } from "@clerk/react";
 import { apiClient } from "../api/client";
 import { setAuthTokenProvider } from "../api/auth-utils/authFetch";
 import { LoadingPage } from "../components/loadingPage";
-import { fetchChatSessions, pollJob } from "../features/cvGeneration/cvGenerationSlice";
+import {
+  fetchChatSessions,
+  isGeneratingSession,
+  loadConversation,
+  selectActiveConversation,
+} from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import styles from "./authenticatedApiProvider.module.css";
 
@@ -14,7 +19,9 @@ export function AuthenticatedApiProvider({ children }: { children: ReactNode }) 
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const dispatch = useAppDispatch();
   const chatSessions = useAppSelector((s) => s.cvGeneration.chatSessions);
-  const pollingJobIds = useAppSelector((s) => s.cvGeneration.pollingJobIds);
+  const activeSessionId = useAppSelector((s) => s.cvGeneration.activeSessionId);
+  const activeConversation = useAppSelector(selectActiveConversation);
+  const hasGeneratingSession = chatSessions.some((session) => isGeneratingSession(session.status));
   const [status, setStatus] = useState<RegistrationState>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -63,18 +70,23 @@ export function AuthenticatedApiProvider({ children }: { children: ReactNode }) 
   }, [dispatch, status]);
 
   useEffect(() => {
-    if (status !== "ready") return;
-    for (const session of chatSessions) {
-      if (
-        !session.latest_job_id ||
-        pollingJobIds[session.latest_job_id] ||
-        (session.latest_job_status !== "pending" && session.latest_job_status !== "running")
-      ) {
-        continue;
-      }
-      void dispatch(pollJob({ sessionId: session.id, jobId: session.latest_job_id }));
+    if (status !== "ready" || !hasGeneratingSession) return;
+    const intervalId = window.setInterval(() => {
+      void dispatch(fetchChatSessions());
+    }, 2_000);
+    return () => window.clearInterval(intervalId);
+  }, [dispatch, hasGeneratingSession, status]);
+
+  useEffect(() => {
+    if (status !== "ready" || !activeSessionId || activeConversation?.generationStatus !== "loading") {
+      return;
     }
-  }, [chatSessions, dispatch, pollingJobIds, status]);
+    void dispatch(loadConversation(activeSessionId));
+    const intervalId = window.setInterval(() => {
+      void dispatch(loadConversation(activeSessionId));
+    }, 2_000);
+    return () => window.clearInterval(intervalId);
+  }, [activeConversation?.generationStatus, activeSessionId, dispatch, status]);
 
   if (status === "ready") {
     return children;

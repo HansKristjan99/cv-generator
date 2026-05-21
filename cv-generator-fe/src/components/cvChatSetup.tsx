@@ -21,7 +21,7 @@ const OPENING_PROMPTS = [
 
 export const CvChatSetup = () => {
   const dispatch = useAppDispatch();
-  const { setupStatus, setupError, monthlySessionsUsed, isUnlimited } = useAppSelector(
+  const { setupStatus, error: setupError, monthlySessionsUsed, isUnlimited } = useAppSelector(
     (s) => s.cvGeneration,
   );
 
@@ -54,7 +54,7 @@ export const CvChatSetup = () => {
     if (!canStart) return;
     void dispatch(
       sendMessage({
-        conversationId: null,
+        sessionId: null,
         userMessage: openingMessage.trim() || "Help me write a CV tailored to this job.",
         cvText,
         cvFile,

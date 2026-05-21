@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from app.agents import EditorAgent, SessionTitleAgent, WriterAgent
 from app.config import MODEL
 from app.db import SessionLocal
-from app.models import CvSession, Job, Message, User
+from app.models import CvSession, Message, User
 from app.schemas import CurriculumVitae, OtherMessage, QuestionsToImproveCv
 from app.services.latex import compile_latex_to_pdf, cv_to_latex
 from app.services.openai_client import OpenAIClient
@@ -27,22 +27,8 @@ from app.services.user_data import format_user_data, update_user_memory
 logger = logging.getLogger(__name__)
 
 
-class CvGeneratedContent(BaseModel):
-    latex: str
-    pdf_base64: str
-
-
-class CvQuestionContent(BaseModel):
-    questions: list[dict]
-
-
-class OtherTextContent(BaseModel):
-    text: str
-
-
 class PipelineResult(BaseModel):
     conversation_id: str
-    content: CvGeneratedContent | CvQuestionContent | OtherTextContent
     asst_message: dict
 
 
@@ -64,7 +50,6 @@ def _run_writer_and_editor(
     if isinstance(content, QuestionsToImproveCv):
         result = PipelineResult(
             conversation_id=conv_id,
-            content=CvQuestionContent(questions=[q.model_dump() for q in content.questions]),
             asst_message={
                 "role": "assistant",
                 "type": "question",
@@ -77,7 +62,6 @@ def _run_writer_and_editor(
     if isinstance(content, OtherMessage):
         result = PipelineResult(
             conversation_id=conv_id,
-            content=OtherTextContent(text=content.text),
             asst_message={"role": "assistant", "type": "text", "content": content.text},
         )
         return result, content
@@ -106,7 +90,6 @@ def _run_writer_and_editor(
 
     result = PipelineResult(
         conversation_id=conv_id,
-        content=CvGeneratedContent(latex=final_latex, pdf_base64=pdf_b64),
         asst_message={
             "role": "assistant",
             "type": "cv",
@@ -119,7 +102,6 @@ def _run_writer_and_editor(
 
 def run_pipeline(
     *,
-    job_id: uuid.UUID,
     cv_session_id: uuid.UUID,
     user_id: uuid.UUID,
     prompt_input: str,
@@ -132,11 +114,12 @@ def run_pipeline(
 ) -> None:
     db = SessionLocal()
     try:
-        job = db.get(Job, job_id)
-        if job is None:
-            logger.error("Background task: job %s not found", job_id)
+        cv_session = db.get(CvSession, cv_session_id)
+        if cv_session is None:
+            logger.error("Background task: session %s not found", cv_session_id)
             return
-        job.status = "running"
+        cv_session.status = "running"
+        cv_session.error = None
         db.commit()
 
         try:
@@ -147,10 +130,8 @@ def run_pipeline(
                 memory_provider=lambda: format_user_data(db, user_id),
             )
 
-            cv_session = db.get(CvSession, cv_session_id)
-            if cv_session and cv_session.conversation_id.startswith("pending-"):
+            if cv_session.conversation_id.startswith("pending-"):
                 cv_session.conversation_id = result.conversation_id
-                db.commit()
 
             user = db.get(User, user_id)
             try:
@@ -168,25 +149,25 @@ def run_pipeline(
                 cv_session_id=cv_session_id, role="assistant", content=result.asst_message,
             ))
 
-            if openai_conversation_id is None and cv_session and not cv_session.title:
+            if openai_conversation_id is None and not cv_session.title:
                 title = SessionTitleAgent(client).run(job_description, user_message_text)
                 if title:
                     cv_session.title = title
 
-            job.status = "succeeded"
-            job.result = result.model_dump()
+            cv_session.status = "idle"
+            cv_session.error = None
             db.commit()
 
         except Exception as exc:
-            logger.exception("CV generation failed for job %s", job_id)
+            logger.exception("CV generation failed for session %s", cv_session_id)
             db.rollback()
-            job = db.get(Job, job_id)
-            if job:
-                job.status = "failed"
-                job.error = str(exc)[:500]
+            cv_session = db.get(CvSession, cv_session_id)
+            if cv_session:
+                cv_session.status = "failed"
+                cv_session.error = str(exc)[:500]
                 db.commit()
     except Exception:
-        logger.exception("Unrecoverable error in background task for job %s", job_id)
+        logger.exception("Unrecoverable error in background task for session %s", cv_session_id)
     finally:
         db.close()
         if file_path and file_path.exists():

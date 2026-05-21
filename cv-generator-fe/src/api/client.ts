@@ -1,5 +1,5 @@
 import { registerCurrentUser } from "./user-management/addUser";
-import { sendChatMessage, getJobStatus, getChatSessions, getChatHistory } from "./cv-chat/cvChat";
+import { sendChatMessage, getChatSessions, getChatHistory } from "./cv-chat/cvChat";
 import { inventCvAnswers } from "./cv-chat/inventAnswers";
 import { getCvQuota } from "./cv-chat/quota";
 import { getUserMemory, updateUserMemory } from "./user-memory/userMemory";
@@ -11,7 +11,6 @@ export const apiClient = {
   sendChatMessage,
   inventCvAnswers,
   getCvQuota,
-  getJobStatus,
   getChatSessions,
   getChatHistory,
   getUserMemory,

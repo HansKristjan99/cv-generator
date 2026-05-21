@@ -1,6 +1,5 @@
 import { authFetch, readErrorMessage } from "../auth-utils/authFetch";
 import type {
-  JobStatusResponse,
   LoadConversationResponse,
   SendChatMessageInput,
   SessionSummary,
@@ -11,8 +10,8 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Star
   const formData = new FormData();
   formData.append("user_message", input.userMessage);
 
-  if (input.conversationId) {
-    formData.append("conversation_id", input.conversationId);
+  if (input.sessionId) {
+    formData.append("session_id", input.sessionId);
   } else {
     if (input.cvText?.trim()) {
       formData.append("text", input.cvText.trim());
@@ -32,12 +31,6 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Star
   }
 
   return (await response.json()) as StartGenerateResponse;
-}
-
-export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
-  const response = await authFetch(`/api/cv/jobs/${jobId}`);
-  if (!response.ok) throw new Error(await readErrorMessage(response));
-  return (await response.json()) as JobStatusResponse;
 }
 
 export async function getChatSessions(): Promise<SessionSummary[]> {

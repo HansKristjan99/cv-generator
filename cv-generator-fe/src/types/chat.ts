@@ -13,27 +13,8 @@ export type ChatMessage = {
   questions?: CvQuestion[];
 };
 
-export type CvGeneratedResponse = { latex: string; pdf_base64: string };
-export type CvQuestionResponse = { questions: CvQuestion[] };
-export type OtherTextResponse = { text: string };
-
-export type GenerateCvResponse = {
-  conversation_id: string;
-  content: CvGeneratedResponse | CvQuestionResponse | OtherTextResponse;
-};
-
-export function isCvGenerated(c: GenerateCvResponse["content"]): c is CvGeneratedResponse {
-  return "latex" in c;
-}
-export function isCvQuestions(c: GenerateCvResponse["content"]): c is CvQuestionResponse {
-  return "questions" in c;
-}
-export function isOtherText(c: GenerateCvResponse["content"]): c is OtherTextResponse {
-  return "text" in c;
-}
-
 export type SendChatMessageInput = {
-  conversationId: string | null;
+  sessionId: string | null;
   userMessage: string;
   cvText?: string;
   cvFile?: File | null;
@@ -41,31 +22,25 @@ export type SendChatMessageInput = {
 };
 
 export type StartGenerateResponse = {
-  job_id: string;
   session_id: string;
-  conversation_id: string;
+  status: SessionStatus;
 };
 
-export type JobStatusResponse = {
-  status: "pending" | "running" | "succeeded" | "failed";
-  result: GenerateCvResponse | null;
-  error: string | null;
-};
+export type SessionStatus = "idle" | "pending" | "running" | "failed";
 
 export type SessionSummary = {
   id: string;
-  conversation_id: string;
   title: string | null;
   message_count: number;
+  status: SessionStatus;
+  error: string | null;
   created_at: string;
-  latest_job_id: string | null;
-  latest_job_status: JobStatusResponse["status"] | null;
-  latest_job_error: string | null;
 };
 
 export type LoadConversationResponse = {
-  conversation_id: string;
   title: string | null;
+  status: SessionStatus;
+  error: string | null;
   messages: ChatMessage[];
   latest_pdf_base64: string | null;
 };
