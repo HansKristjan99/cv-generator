@@ -30,8 +30,10 @@ class _FakeClient:
 
     outputs: list[PolishedCv]
     calls: int = field(default=0)
+    last_tools: list | None = field(default=None)
 
     def get_structured_output(self, prompt, output_structure, **kwargs):  # noqa: ARG002
+        self.last_tools = kwargs.get("tools")
         idx = self.calls
         self.calls += 1
         if idx >= len(self.outputs):
@@ -125,6 +127,48 @@ def test_raises_when_no_compile_ever_succeeds() -> None:
                 cv=cv, layout=layout, template_slug="default",
                 initial_compile=initial, target_pages=1, job_description=None,
             )
+
+
+def test_profile_tool_exposed_only_when_memory_provider_given() -> None:
+    cv, layout = _cv(), _layout()
+    client = _FakeClient(outputs=[PolishedCv(cv=cv, layout=layout)])
+    initial = CompileResult(success=True, page_count=2, pdf_bytes=b"PDF")
+    compiles = [CompileResult(success=True, page_count=1, pdf_bytes=b"PDF2")]
+    with patch("app.agents.editor.compile_latex_to_pdf", side_effect=compiles), \
+         patch("app.agents.editor.cv_to_latex", return_value="rendered"):
+        EditorAgent(client, max_iterations=1, memory_provider=lambda: "stored profile").run(
+            cv=cv, layout=layout, template_slug="default",
+            initial_compile=initial, target_pages=1, job_description=None,
+        )
+    assert client.last_tools is not None
+    assert client.last_tools[0]["name"] == "fetch_candidate_profile"
+
+
+def test_profile_tool_absent_without_memory_provider() -> None:
+    cv, layout = _cv(), _layout()
+    client = _FakeClient(outputs=[PolishedCv(cv=cv, layout=layout)])
+    initial = CompileResult(success=True, page_count=2, pdf_bytes=b"PDF")
+    compiles = [CompileResult(success=True, page_count=1, pdf_bytes=b"PDF2")]
+    with patch("app.agents.editor.compile_latex_to_pdf", side_effect=compiles), \
+         patch("app.agents.editor.cv_to_latex", return_value="rendered"):
+        EditorAgent(client, max_iterations=1).run(
+            cv=cv, layout=layout, template_slug="default",
+            initial_compile=initial, target_pages=1, job_description=None,
+        )
+    assert client.last_tools is None
+
+
+def test_profile_handler_returns_memory_blob() -> None:
+    from app.agents.editor import _profile_handler
+    handler = _profile_handler(lambda: "stored facts")
+    assert handler("fetch_candidate_profile", {"reason": "expand"}) == {"profile": "stored facts"}
+    assert handler("fetch_candidate_profile", {"reason": ""}) == {"profile": "stored facts"}
+
+
+def test_profile_handler_handles_empty_memory() -> None:
+    from app.agents.editor import _profile_handler
+    handler = _profile_handler(lambda: "")
+    assert handler("fetch_candidate_profile", {"reason": "x"}) == {"profile": "(no stored profile)"}
 
 
 if __name__ == "__main__":
