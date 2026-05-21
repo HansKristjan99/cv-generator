@@ -21,7 +21,9 @@ const OPENING_PROMPTS = [
 
 export const CvChatSetup = () => {
   const dispatch = useAppDispatch();
-  const { status, error, monthlySessionsUsed, isUnlimited } = useAppSelector((s) => s.cvGeneration);
+  const { setupStatus, setupError, monthlySessionsUsed, isUnlimited } = useAppSelector(
+    (s) => s.cvGeneration,
+  );
 
   const [cvText, setCvText] = useState("");
   const [cvFile, setCvFile] = useState<File | null>(null);
@@ -29,7 +31,7 @@ export const CvChatSetup = () => {
   const [jobDescription, setJobDescription] = useState("");
   const [openingMessage, setOpeningMessage] = useState("");
 
-  const isLoading = status === "loading";
+  const isLoading = setupStatus === "loading";
   const hasCv = Boolean(cvText.trim() || cvFile);
   const hasJob = Boolean(jobDescription.trim());
   const sessionsRemaining =
@@ -190,7 +192,7 @@ export const CvChatSetup = () => {
           </button>
         </div>
       </footer>
-      {error ? <p className={styles.error}>{error}</p> : null}
+      {setupError ? <p className={styles.error}>{setupError}</p> : null}
     </form>
   );
 };

@@ -1,4 +1,4 @@
-import { loadConversation } from "../features/cvGeneration/cvGenerationSlice";
+import { loadConversation, setActiveSession } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { cx } from "../utils/cx";
 import styles from "./recentChats.module.css";
@@ -13,12 +13,10 @@ function formatRelativeDate(dateStr: string): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-export function RecentChats() {
+export function RecentChats({ onOpenSession }: { onOpenSession?: () => void }) {
   const dispatch = useAppDispatch();
   const sessions = useAppSelector((s) => s.cvGeneration.chatSessions);
   const activeSessionId = useAppSelector((s) => s.cvGeneration.activeSessionId);
-  const status = useAppSelector((s) => s.cvGeneration.status);
-  const activeIsPending = status === "loading";
 
   if (!sessions.length) return null;
 
@@ -28,7 +26,9 @@ export function RecentChats() {
       <ul className={styles.list}>
         {sessions.map((session) => {
           const isActive = session.id === activeSessionId;
-          const showPending = isActive && activeIsPending;
+          const showPending =
+            session.latest_job_status === "pending" || session.latest_job_status === "running";
+          const showFailed = session.latest_job_status === "failed";
           return (
             <li key={session.id}>
               <button
@@ -39,6 +39,13 @@ export function RecentChats() {
                   showPending && styles.itemPending,
                 )}
                 onClick={() => {
+                  onOpenSession?.();
+                  dispatch(
+                    setActiveSession({
+                      sessionId: session.id,
+                      conversationId: session.conversation_id,
+                    }),
+                  );
                   if (session.id === activeSessionId) return;
                   void dispatch(loadConversation(session.id));
                 }}
@@ -48,7 +55,11 @@ export function RecentChats() {
                   <span className={styles.title}>{session.title ?? "Untitled"}</span>
                 </span>
                 <span className={styles.date}>
-                  {showPending ? "Generating…" : formatRelativeDate(session.created_at)}
+                  {showPending
+                    ? "Generating…"
+                    : showFailed
+                      ? "Failed"
+                      : formatRelativeDate(session.created_at)}
                 </span>
               </button>
             </li>

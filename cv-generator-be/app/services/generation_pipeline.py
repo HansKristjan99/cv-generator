@@ -165,10 +165,6 @@ def run_pipeline(
                 logger.exception("update_user_memory failed; continuing")
 
             db.add(Message(
-                cv_session_id=cv_session_id, role="user",
-                content={"role": "user", "type": "text", "content": user_message_text},
-            ))
-            db.add(Message(
                 cv_session_id=cv_session_id, role="assistant", content=result.asst_message,
             ))
 

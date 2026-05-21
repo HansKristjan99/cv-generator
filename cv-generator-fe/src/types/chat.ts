@@ -54,9 +54,13 @@ export type JobStatusResponse = {
 
 export type SessionSummary = {
   id: string;
+  conversation_id: string;
   title: string | null;
   message_count: number;
   created_at: string;
+  latest_job_id: string | null;
+  latest_job_status: JobStatusResponse["status"] | null;
+  latest_job_error: string | null;
 };
 
 export type LoadConversationResponse = {

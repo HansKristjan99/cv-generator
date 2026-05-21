@@ -4,8 +4,8 @@ import { useAuth } from "@clerk/react";
 import { apiClient } from "../api/client";
 import { setAuthTokenProvider } from "../api/auth-utils/authFetch";
 import { LoadingPage } from "../components/loadingPage";
-import { fetchChatSessions } from "../features/cvGeneration/cvGenerationSlice";
-import { useAppDispatch } from "../hooks";
+import { fetchChatSessions, pollJob } from "../features/cvGeneration/cvGenerationSlice";
+import { useAppDispatch, useAppSelector } from "../hooks";
 import styles from "./authenticatedApiProvider.module.css";
 
 type RegistrationState = "idle" | "loading" | "ready" | "failed";
@@ -13,6 +13,8 @@ type RegistrationState = "idle" | "loading" | "ready" | "failed";
 export function AuthenticatedApiProvider({ children }: { children: ReactNode }) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const dispatch = useAppDispatch();
+  const chatSessions = useAppSelector((s) => s.cvGeneration.chatSessions);
+  const pollingJobIds = useAppSelector((s) => s.cvGeneration.pollingJobIds);
   const [status, setStatus] = useState<RegistrationState>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +52,29 @@ export function AuthenticatedApiProvider({ children }: { children: ReactNode }) 
       setAuthTokenProvider(null);
     };
   }, [dispatch, getToken, isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    if (status !== "ready") return;
+    void dispatch(fetchChatSessions());
+    const intervalId = window.setInterval(() => {
+      void dispatch(fetchChatSessions());
+    }, 60_000);
+    return () => window.clearInterval(intervalId);
+  }, [dispatch, status]);
+
+  useEffect(() => {
+    if (status !== "ready") return;
+    for (const session of chatSessions) {
+      if (
+        !session.latest_job_id ||
+        pollingJobIds[session.latest_job_id] ||
+        (session.latest_job_status !== "pending" && session.latest_job_status !== "running")
+      ) {
+        continue;
+      }
+      void dispatch(pollJob({ sessionId: session.id, jobId: session.latest_job_id }));
+    }
+  }, [chatSessions, dispatch, pollingJobIds, status]);
 
   if (status === "ready") {
     return children;

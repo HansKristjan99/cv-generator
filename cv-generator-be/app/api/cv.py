@@ -21,7 +21,7 @@ from app.config import (
     MAX_USER_MESSAGE_CHARS,
 )
 from app.db import get_db
-from app.models import CvSession, Job, Template, User
+from app.models import CvSession, Job, Message, Template, User
 from app.services.auth import ensure_current_user
 from app.services.generation_pipeline import run_pipeline
 from app.services.user_data import format_user_data
@@ -150,6 +150,11 @@ async def generate_cv(
     template_slug = _resolve_template_slug(template_id, current_user, db)
     job = Job(user_id=current_user.id, cv_session_id=cv_session.id, status="pending")
     db.add(job)
+    db.add(Message(
+        cv_session_id=cv_session.id,
+        role="user",
+        content={"role": "user", "type": "text", "content": user_message_text},
+    ))
     db.commit()
 
     background_tasks.add_task(

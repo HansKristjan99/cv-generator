@@ -1,17 +1,20 @@
 import { MAX_INVENTS_PER_MONTH } from "../config/limits";
-import { enhanceAnswers } from "../features/cvGeneration/cvGenerationSlice";
+import { enhanceAnswers, selectActiveConversation } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import type { CvQuestion } from "../types/chat";
 import styles from "./cvChatEnhanceButton.module.css";
 
 export const CvChatEnhanceButton = ({ questions }: { questions: CvQuestion[] }) => {
   const dispatch = useAppDispatch();
-  const { status, monthlyInventsUsed, isUnlimited } = useAppSelector((s) => s.cvGeneration);
+  const activeConversation = useAppSelector(selectActiveConversation);
+  const { monthlyInventsUsed, isUnlimited } = useAppSelector((s) => s.cvGeneration);
 
   const inventsRemaining =
     !isUnlimited && monthlyInventsUsed !== null ? MAX_INVENTS_PER_MONTH - monthlyInventsUsed : null;
   const atLimit = inventsRemaining !== null && inventsRemaining <= 0;
-  const loading = status === "loading";
+  const loading =
+    activeConversation?.generationStatus === "loading" ||
+    activeConversation?.enhanceStatus === "loading";
   const disabled = loading || questions.length === 0 || atLimit;
 
   return (

@@ -63,6 +63,9 @@ class SessionSummary(BaseModel):
     title: str | None
     message_count: int
     created_at: datetime
+    latest_job_id: str | None = None
+    latest_job_status: str | None = None
+    latest_job_error: str | None = None
 
 
 @router.get("/sessions/", response_model=list[SessionSummary])
@@ -76,10 +79,25 @@ def list_sessions(
         .order_by(CvSession.created_at.desc())
         .limit(50)
     ).all()
+
+    latest_jobs: dict[uuid.UUID, Job] = {}
+    session_ids = [s.id for s in sessions]
+    if session_ids:
+        jobs = db.scalars(
+            select(Job)
+            .where(Job.user_id == current_user.id, Job.cv_session_id.in_(session_ids))
+            .order_by(Job.created_at.desc())
+        ).all()
+        for job in jobs:
+            latest_jobs.setdefault(job.cv_session_id, job)
+
     return [
         SessionSummary(
             id=str(s.id), conversation_id=s.conversation_id, title=s.title,
             message_count=s.message_count, created_at=s.created_at,
+            latest_job_id=str(latest_jobs[s.id].id) if s.id in latest_jobs else None,
+            latest_job_status=latest_jobs[s.id].status if s.id in latest_jobs else None,
+            latest_job_error=latest_jobs[s.id].error if s.id in latest_jobs else None,
         )
         for s in sessions
     ]

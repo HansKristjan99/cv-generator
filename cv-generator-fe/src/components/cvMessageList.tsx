@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+import { selectActiveConversation } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppSelector } from "../hooks";
 import { cx } from "../utils/cx";
 import { CvChatMessage } from "./cvChatMessage";
@@ -8,7 +9,10 @@ import styles from "./cvMessageList.module.css";
 import msg from "./cvChatMessage.module.css";
 
 export const CvChatMessageList = () => {
-  const { messageHistory, status, error } = useAppSelector((s) => s.cvGeneration);
+  const activeConversation = useAppSelector(selectActiveConversation);
+  const messageHistory = activeConversation?.messageHistory ?? [];
+  const status = activeConversation?.generationStatus ?? "idle";
+  const error = activeConversation?.error ?? null;
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

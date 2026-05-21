@@ -5,8 +5,7 @@ import { ConversationPage } from "../pages/conversationPage";
 import { CvGeneratorPage } from "../pages/cvGeneratorPage";
 import { TemplatesPage } from "../pages/templatesPage";
 import { UserMemoryPage } from "../pages/userMemoryPage";
-import { resetChat } from "../features/cvGeneration/cvGenerationSlice";
-import { useAppDispatch, useAppSelector } from "../hooks";
+import { useAppSelector } from "../hooks";
 import { AuthenticatedApiProvider } from "../routes/authenticatedApiProvider";
 import { RecentChats } from "./recentChats";
 import { cx } from "../utils/cx";
@@ -23,17 +22,13 @@ const tabs: Array<{ id: AppTab; label: string; detail: string }> = [
 export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
   const [activeTab, setActiveTab] = useState<AppTab>(initialTab);
   const { isLoaded, isSignedIn } = useAuth();
-  const dispatch = useAppDispatch();
   const activeSessionId = useAppSelector((s) => s.cvGeneration.activeSessionId);
 
   const handleTabClick = (tabId: AppTab) => {
     setActiveTab(tabId);
-    if (activeSessionId) {
-      dispatch(resetChat());
-    }
   };
 
-  const showConversation = isSignedIn && Boolean(activeSessionId);
+  const showConversation = isSignedIn && activeTab === "cv" && Boolean(activeSessionId);
 
   return (
     <div className={styles.shell}>
@@ -48,7 +43,7 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
 
         <nav className={styles.tabs} aria-label="Workspace tabs">
           {tabs.map((tab, index) => {
-            const isActive = !activeSessionId && activeTab === tab.id;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
@@ -70,7 +65,7 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
 
         {isSignedIn && (
           <div className={styles.recentChats}>
-            <RecentChats />
+            <RecentChats onOpenSession={() => setActiveTab("cv")} />
           </div>
         )}
 
@@ -99,16 +94,28 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
       </aside>
 
       <main className={styles.main}>
-        {showConversation ? (
-          <AuthenticatedTab title="Conversation" isLoaded={isLoaded} isSignedIn={isSignedIn}>
-            <ConversationPage />
-          </AuthenticatedTab>
+        {isLoaded && isSignedIn ? (
+          <AuthenticatedApiProvider>
+            {showConversation ? <ConversationPage /> : renderAuthenticatedTab(activeTab)}
+          </AuthenticatedApiProvider>
         ) : (
           renderTab(activeTab, isLoaded, isSignedIn)
         )}
       </main>
     </div>
   );
+}
+
+function renderAuthenticatedTab(activeTab: AppTab) {
+  if (activeTab === "templates") {
+    return <TemplatesPage />;
+  }
+
+  if (activeTab === "user memory") {
+    return <UserMemoryPage />;
+  }
+
+  return <CvGeneratorPage />;
 }
 
 function renderTab(activeTab: AppTab, isLoaded: boolean, isSignedIn: boolean | undefined) {
@@ -171,7 +178,7 @@ function AuthenticatedTab({
     );
   }
 
-  return <AuthenticatedApiProvider>{children}</AuthenticatedApiProvider>;
+  return children;
 }
 
 function Placeholder({ title, compact = false }: { title: string; compact?: boolean }) {

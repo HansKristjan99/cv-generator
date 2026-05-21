@@ -2,7 +2,7 @@ import { CvChatHeader } from "../components/cvChatHeader";
 import { CvChatMessageComposer } from "../components/cvChatMessageComposer";
 import { CvChatMessageList } from "../components/cvMessageList";
 import { CvPdfPane } from "../components/cvPdfPane";
-import { resetChat } from "../features/cvGeneration/cvGenerationSlice";
+import { resetChat, selectActiveConversation } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { cx } from "../utils/cx";
 import chatStyles from "../components/cvChat.module.css";
@@ -10,9 +10,9 @@ import styles from "./cvGeneratorPage.module.css";
 
 export function ConversationPage() {
   const dispatch = useAppDispatch();
-  const { latestPdfBase64, chatSessions, activeSessionId } = useAppSelector(
-    (s) => s.cvGeneration,
-  );
+  const activeConversation = useAppSelector(selectActiveConversation);
+  const { chatSessions, activeSessionId } = useAppSelector((s) => s.cvGeneration);
+  const latestPdfBase64 = activeConversation?.latestPdfBase64 ?? null;
   const showPdf = Boolean(latestPdfBase64);
   const activeSession = chatSessions.find((s) => s.id === activeSessionId);
   const title = activeSession?.title ?? "Conversation";

@@ -1,5 +1,9 @@
 import { MAX_MESSAGES_PER_SESSION, MAX_USER_MESSAGE_CHARS } from "../config/limits";
-import { sendMessage, setDraftMessage } from "../features/cvGeneration/cvGenerationSlice";
+import {
+  selectActiveConversation,
+  sendMessage,
+  setDraftMessage,
+} from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import styles from "./cvChatMessageComposer.module.css";
 
@@ -12,15 +16,19 @@ const PROMPT_CHIPS = [
 
 export const CvChatMessageComposer = () => {
   const dispatch = useAppDispatch();
-  const { draftMessage, conversationId, status, messageHistory } = useAppSelector(
-    (s) => s.cvGeneration,
-  );
+  const activeConversation = useAppSelector(selectActiveConversation);
+  const draftMessage = activeConversation?.draftMessage ?? "";
+  const conversationId = activeConversation?.conversationId ?? null;
+  const messageHistory = activeConversation?.messageHistory ?? [];
+  const isBusy =
+    activeConversation?.generationStatus === "loading" ||
+    activeConversation?.enhanceStatus === "loading";
 
   const trimmed = draftMessage.trim();
   const messagesUsed = messageHistory.length;
   const messagesRemaining = MAX_MESSAGES_PER_SESSION - messagesUsed;
   const atLimit = messagesRemaining <= 0;
-  const disabled = status === "loading" || !trimmed || atLimit;
+  const disabled = isBusy || !trimmed || atLimit || !conversationId;
 
   const onSend = () => {
     if (disabled) return;
