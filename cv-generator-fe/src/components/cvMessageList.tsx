@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { useAppSelector } from "../hooks";
 import { cx } from "../utils/cx";
 import { CvChatMessage } from "./cvChatMessage";
+import { CvGeneratingCard } from "./cvGeneratingCard";
 import styles from "./cvMessageList.module.css";
 import msg from "./cvChatMessage.module.css";
 
@@ -27,11 +28,7 @@ export const CvChatMessageList = () => {
         ))}
         {status === "loading" ? (
           <li>
-            <div className={cx(msg.bubble, msg.assistant, msg.thinking)}>
-              <span />
-              <span />
-              <span />
-            </div>
+            <CvGeneratingCard />
           </li>
         ) : null}
         {status === "failed" && error ? (

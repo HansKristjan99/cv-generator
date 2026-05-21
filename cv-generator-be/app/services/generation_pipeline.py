@@ -19,6 +19,7 @@ from app.db import SessionLocal
 from app.models import CvSession, Job, Message, User
 from app.schemas import CurriculumVitae, OtherMessage, QuestionsToImproveCv
 from app.services.latex import compile_latex_to_pdf, cv_to_latex
+from app.services.templates.default import DEFAULT_LAYOUT
 from app.services.openai_client import OpenAIClient
 from app.services.user_data import update_user_memory
 
@@ -80,14 +81,15 @@ def _run_writer_and_editor(
         return result, content
 
     assert isinstance(content, CurriculumVitae)
-    latex = cv_to_latex(content, template_slug)
-    initial = compile_latex_to_pdf(latex)
+    initial_latex = cv_to_latex(content, template_slug, DEFAULT_LAYOUT)
+    initial = compile_latex_to_pdf(initial_latex)
     if not initial.success:
         logger.error("Initial CV compilation failed: %s", initial.error)
 
-    editor = EditorAgent(client)
-    edit = editor.run(
-        latex=latex,
+    edit = EditorAgent(client).run(
+        cv=content,
+        layout=DEFAULT_LAYOUT,
+        template_slug=template_slug,
         initial_compile=initial,
         target_pages=content.target_pages,
         job_description=job_description,
