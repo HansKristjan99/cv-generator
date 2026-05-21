@@ -4,12 +4,15 @@ import { useAuth } from "@clerk/react";
 import { apiClient } from "../api/client";
 import { setAuthTokenProvider } from "../api/auth-utils/authFetch";
 import { LoadingPage } from "../components/loadingPage";
+import { fetchChatSessions } from "../features/cvGeneration/cvGenerationSlice";
+import { useAppDispatch } from "../hooks";
 import styles from "./authenticatedApiProvider.module.css";
 
 type RegistrationState = "idle" | "loading" | "ready" | "failed";
 
 export function AuthenticatedApiProvider({ children }: { children: ReactNode }) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
+  const dispatch = useAppDispatch();
   const [status, setStatus] = useState<RegistrationState>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +34,9 @@ export function AuthenticatedApiProvider({ children }: { children: ReactNode }) 
     void apiClient
       .registerCurrentUser()
       .then(() => {
-        if (!cancelled) setStatus("ready");
+        if (cancelled) return;
+        setStatus("ready");
+        void dispatch(fetchChatSessions());
       })
       .catch((err) => {
         if (!cancelled) {
@@ -44,7 +49,7 @@ export function AuthenticatedApiProvider({ children }: { children: ReactNode }) 
       cancelled = true;
       setAuthTokenProvider(null);
     };
-  }, [getToken, isLoaded, isSignedIn]);
+  }, [dispatch, getToken, isLoaded, isSignedIn]);
 
   if (status === "ready") {
     return children;

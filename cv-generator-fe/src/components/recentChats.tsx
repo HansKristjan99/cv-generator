@@ -1,6 +1,4 @@
-import { useEffect } from "react";
-
-import { fetchChatSessions, loadConversation } from "../features/cvGeneration/cvGenerationSlice";
+import { loadConversation } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { cx } from "../utils/cx";
 import styles from "./recentChats.module.css";
@@ -19,10 +17,6 @@ export function RecentChats() {
   const dispatch = useAppDispatch();
   const sessions = useAppSelector((s) => s.cvGeneration.chatSessions);
   const activeSessionId = useAppSelector((s) => s.cvGeneration.activeSessionId);
-
-  useEffect(() => {
-    void dispatch(fetchChatSessions());
-  }, [dispatch]);
 
   if (!sessions.length) return null;
 

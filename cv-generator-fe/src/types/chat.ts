@@ -15,11 +15,22 @@ export type ChatMessage = {
 
 export type CvGeneratedResponse = { latex: string; pdf_base64: string };
 export type CvQuestionResponse = { questions: CvQuestion[] };
+export type OtherTextResponse = { text: string };
 
 export type GenerateCvResponse = {
   conversation_id: string;
-  content: CvGeneratedResponse | CvQuestionResponse;
+  content: CvGeneratedResponse | CvQuestionResponse | OtherTextResponse;
 };
+
+export function isCvGenerated(c: GenerateCvResponse["content"]): c is CvGeneratedResponse {
+  return "latex" in c;
+}
+export function isCvQuestions(c: GenerateCvResponse["content"]): c is CvQuestionResponse {
+  return "questions" in c;
+}
+export function isOtherText(c: GenerateCvResponse["content"]): c is OtherTextResponse {
+  return "text" in c;
+}
 
 export type SendChatMessageInput = {
   conversationId: string | null;

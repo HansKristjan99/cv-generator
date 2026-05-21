@@ -1,4 +1,4 @@
-from app.schemas import CurriculumVitae, CVWriterResponse
+from app.schemas import CurriculumVitae, CVWriterResponse, OtherMessage
 
 
 def _minimal_cv() -> CurriculumVitae:
@@ -15,6 +15,7 @@ def _minimal_cv() -> CurriculumVitae:
         projects=[],
         awards=[],
         job_requirements=[],
+        target_pages=1,
     )
 
 
@@ -36,3 +37,10 @@ def test_cv_writer_response_round_trip() -> None:
 def test_cv_writer_response_schema_is_strict_compatible() -> None:
     schema = CVWriterResponse.model_json_schema()
     assert set(schema["required"]) == set(schema["properties"].keys())
+
+
+def test_other_message_variant() -> None:
+    response = CVWriterResponse(content=OtherMessage(text="Glad to help!"))
+    parsed = CVWriterResponse.model_validate_json(response.model_dump_json())
+    assert isinstance(parsed.content, OtherMessage)
+    assert parsed.content.text == "Glad to help!"
