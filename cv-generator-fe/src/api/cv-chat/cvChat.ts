@@ -22,6 +22,9 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Star
     if (input.jobDescription?.trim()) {
       formData.append("job_description", input.jobDescription.trim());
     }
+    if (input.pageCount) {
+      formData.append("page_count", String(input.pageCount));
+    }
   }
 
   const response = await authFetch("/api/cv/generate/", { method: "POST", body: formData });

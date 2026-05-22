@@ -19,6 +19,8 @@ export type SendChatMessageInput = {
   cvText?: string;
   cvFile?: File | null;
   jobDescription?: string;
+  /** Required CV length in pages (1–3); only used when starting a new session. */
+  pageCount?: number;
 };
 
 export type StartGenerateResponse = {
@@ -32,6 +34,7 @@ export type SessionSummary = {
   id: string;
   title: string | null;
   message_count: number;
+  page_count: number;
   status: SessionStatus;
   error: string | null;
   created_at: string;
@@ -41,6 +44,7 @@ export type LoadConversationResponse = {
   title: string | null;
   status: SessionStatus;
   error: string | null;
+  page_count: number;
   messages: ChatMessage[];
   latest_pdf_base64: string | null;
 };

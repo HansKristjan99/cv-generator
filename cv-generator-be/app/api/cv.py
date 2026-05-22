@@ -7,7 +7,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -75,23 +75,42 @@ class StartGenerateResponse(BaseModel):
     status: str
 
 
+class GenerateForm(BaseModel):
+    """Multipart payload for /cv/generate/. New sessions supply the CV source,
+    job description, and page count; follow-up turns supply session_id + a message."""
+
+    user_message: str | None = None
+    text: str | None = None
+    job_description: str | None = None
+    file: UploadFile | None = None
+    session_id: uuid.UUID | None = None
+    template_id: str | None = None
+    page_count: int = 1
+
+
 @router.post("/generate/", response_model=StartGenerateResponse, status_code=202)
 async def generate_cv(
     background_tasks: BackgroundTasks,
     current_user: Annotated[User, Depends(ensure_current_user)],
     db: Annotated[Session, Depends(get_db)],
-    user_message: str | None = Form(None),
-    text: str | None = Form(None),
-    job_description: str | None = Form(None),
-    file: UploadFile | None = File(None),
-    session_id: uuid.UUID | None = Form(None),
-    template_id: str | None = Form(None),
+    form: Annotated[GenerateForm, Form()],
 ) -> StartGenerateResponse:
+    user_message = form.user_message
+    text = form.text
+    job_description = form.job_description
+    file = form.file
+    session_id = form.session_id
+    template_id = form.template_id
+    page_count = form.page_count
+
     file_path: Path | None = None
     logger.info(
         "generate_cv user=%s session_id=%s has_text=%s has_file=%s has_jd=%s template_id=%s",
         current_user.id, session_id, bool(text), file is not None, bool(job_description), template_id,
     )
+
+    if page_count not in (1, 2, 3):
+        raise HTTPException(400, "page_count must be 1, 2, or 3.")
 
     if session_id is None:
         if not (text or file) or not job_description:
@@ -116,6 +135,7 @@ async def generate_cv(
             user_id=current_user.id,
             conversation_id=f"pending-{uuid.uuid4()}",
             job_description=job_description,
+            page_count=page_count,
             message_count=1,
             status="pending",
         )
@@ -149,6 +169,7 @@ async def generate_cv(
         openai_conversation_id = cv_session.conversation_id
         user_message_text = user_message
         job_description = cv_session.job_description
+        page_count = cv_session.page_count
         text = None
 
     template_slug = _resolve_template_slug(template_id, current_user, db)
@@ -174,6 +195,7 @@ async def generate_cv(
         user_message_text=user_message_text,
         job_description=job_description,
         cv_text=text,
+        page_count=page_count,
     )
 
     logger.info("generate_cv queued session=%s", cv_session.id)

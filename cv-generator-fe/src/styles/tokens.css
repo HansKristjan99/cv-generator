@@ -82,5 +82,5 @@
 
   /* ---- Layout ---- */
   --sidebar-width: 260px;
-  --pane-height: min(70vh, 720px);
+  --pane-height: clamp(560px, calc(100vh - 150px), 1180px);
 }

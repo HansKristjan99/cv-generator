@@ -19,6 +19,12 @@ const OPENING_PROMPTS = [
   "Match the tone of the job description.",
 ];
 
+const PAGE_OPTIONS = [
+  { value: 1, title: "1 page", desc: "Junior to mid-level" },
+  { value: 2, title: "2 pages", desc: "Senior, 8+ years" },
+  { value: 3, title: "3 pages", desc: "Staff / principal" },
+];
+
 export const CvChatSetup = () => {
   const dispatch = useAppDispatch();
   const { setupStatus, error: setupError, monthlySessionsUsed, isUnlimited } = useAppSelector(
@@ -30,6 +36,7 @@ export const CvChatSetup = () => {
   const [fileError, setFileError] = useState<string | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [openingMessage, setOpeningMessage] = useState("");
+  const [pageCount, setPageCount] = useState(1);
 
   const isLoading = setupStatus === "loading";
   const hasCv = Boolean(cvText.trim() || cvFile);
@@ -59,6 +66,7 @@ export const CvChatSetup = () => {
         cvText,
         cvFile,
         jobDescription,
+        pageCount,
       }),
     );
   };
@@ -166,6 +174,31 @@ export const CvChatSetup = () => {
           onChange={(e) => setOpeningMessage(e.target.value)}
           placeholder="Tell Hirable which angle to chase…"
         />
+      </section>
+
+      <section className={styles.length}>
+        <div className={styles.lengthHead}>
+          <span className={styles.lengthLabel}>CV length</span>
+          <span className={styles.lengthHint}>Hirable renders to exactly this many pages.</span>
+        </div>
+        <div className={styles.lengthOptions} role="radiogroup" aria-label="CV length in pages">
+          {PAGE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={pageCount === option.value}
+              className={cx(styles.lengthChip, pageCount === option.value && styles.lengthChipOn)}
+              onClick={() => setPageCount(option.value)}
+            >
+              <span className={styles.lengthChipValue}>{option.value}</span>
+              <span className={styles.lengthChipText}>
+                <span className={styles.lengthChipTitle}>{option.title}</span>
+                <span className={styles.lengthChipDesc}>{option.desc}</span>
+              </span>
+            </button>
+          ))}
+        </div>
       </section>
 
       <footer className={styles.actions}>

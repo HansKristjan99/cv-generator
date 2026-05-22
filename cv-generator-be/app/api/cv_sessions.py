@@ -32,6 +32,7 @@ class SessionSummary(BaseModel):
     id: str
     title: str | None
     message_count: int
+    page_count: int
     status: str
     error: str | None
     created_at: datetime
@@ -51,7 +52,8 @@ def list_sessions(
     return [
         SessionSummary(
             id=str(s.id), title=s.title, message_count=s.message_count,
-            status=s.status, error=s.error, created_at=s.created_at,
+            page_count=s.page_count, status=s.status, error=s.error,
+            created_at=s.created_at,
         )
         for s in sessions
     ]
@@ -68,6 +70,7 @@ class LoadConversationResponse(BaseModel):
     title: str | None
     status: str
     error: str | None
+    page_count: int
     messages: list[ChatMessageResponse]
     latest_pdf_base64: str | None
 
@@ -109,6 +112,7 @@ def get_session_messages(
         title=cv_session.title,
         status=cv_session.status,
         error=cv_session.error,
+        page_count=cv_session.page_count,
         messages=messages,
         latest_pdf_base64=latest_pdf_base64,
     )

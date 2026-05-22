@@ -1,69 +1,56 @@
-"""Default CV template — the original compact single-column layout."""
+"""Default CV template — compact single-column layout.
+
+Free-text fields on the input CurriculumVitae are assumed to be already escaped
+for LaTeX by ``app.services.latex_escape.escape_cv_for_latex``. URL-position
+values (email, links, project.url) come in raw and are escaped here only where
+used as display text inside ``\\href{URL}{display}``.
+"""
 
 from app.schemas import (
     Award,
     CurriculumVitae,
     Education,
     JobExperience,
-    LayoutOverrides,
     Project,
     SkillSection,
 )
+from app.services.latex_escape import escape_tex
 
-DEFAULT_LAYOUT = LayoutOverrides(font_size_pt=10, margin_cm=1.2, section_spacing_pt=8)
+_FONT_PT = 10
+_MARGIN_CM = 1.2
+_SECTION_SPACING_PT = 8
 
-
-def _preamble(layout: LayoutOverrides) -> str:
-    return (
-        r"\documentclass[" + str(layout.font_size_pt) + r"pt]{article}" + "\n"
-        r"\usepackage[utf8]{inputenc}" + "\n"
-        r"\usepackage[T1]{fontenc}" + "\n"
-        r"\usepackage[english]{babel}" + "\n"
-        r"\usepackage[left=" + f"{layout.margin_cm:.2f}cm"
-        + r",top=" + f"{layout.margin_cm:.2f}cm"
-        + r",right=" + f"{layout.margin_cm:.2f}cm"
-        + r",bottom=" + f"{layout.margin_cm:.2f}cm"
-        + r"]{geometry}" + "\n"
-        r"\usepackage[hidelinks]{hyperref}" + "\n"
-        r"\usepackage{parskip}" + "\n"
-        r"\usepackage{xcolor}" + "\n"
-        r"\pagestyle{empty}" + "\n"
-        r"\setlength{\parskip}{0pt}" + "\n"
-        r"\newcommand{\cvsection}[1]{\vspace{" + str(layout.section_spacing_pt) + r"pt}"
-        + r"{\large \textbf{#1}}\\[-5pt]{\color{black!35}\hrule height 0.4pt}\vspace{5pt}}" + "\n"
-        r"\newcommand{\cventry}[4]{\textbf{#1} \hfill #2\\\textit{#3} \hfill #4}" + "\n"
-        r"\newenvironment{cvitemize}{\begin{list}{$\bullet$}"
-        r"{\setlength{\itemsep}{0pt}\setlength{\topsep}{2pt}\setlength{\parsep}{1.5pt}"
-        r"\setlength{\leftmargin}{14pt}}}{\end{list}}" + "\n"
-        r"\begin{document}" + "\n"
-        r"\small" + "\n"
-    )
-
-_ESCAPE = str.maketrans({
-    "&": r"\&",
-    "%": r"\%",
-    "$": r"\$",
-    "#": r"\#",
-    "_": r"\_",
-    "{": r"\{",
-    "}": r"\}",
-    "~": r"\textasciitilde{}",
-    "^": r"\textasciicircum{}",
-})
-
-
-def _e(s: str) -> str:
-    return s.translate(_ESCAPE)
+_PREAMBLE = (
+    rf"\documentclass[{_FONT_PT}pt]{{article}}" + "\n"
+    r"\usepackage[utf8]{inputenc}" + "\n"
+    r"\usepackage[T1]{fontenc}" + "\n"
+    r"\usepackage[english]{babel}" + "\n"
+    rf"\usepackage[left={_MARGIN_CM:.2f}cm,top={_MARGIN_CM:.2f}cm,"
+    rf"right={_MARGIN_CM:.2f}cm,bottom={_MARGIN_CM:.2f}cm]{{geometry}}" + "\n"
+    r"\usepackage[hidelinks]{hyperref}" + "\n"
+    r"\usepackage{parskip}" + "\n"
+    r"\usepackage{xcolor}" + "\n"
+    r"\pagestyle{empty}" + "\n"
+    r"\setlength{\parskip}{0pt}" + "\n"
+    rf"\newcommand{{\cvsection}}[1]{{\vspace{{{_SECTION_SPACING_PT}pt}}"
+    r"{\large \textbf{#1}}\\[-5pt]{\color{black!35}\hrule height 0.4pt}\vspace{5pt}}" + "\n"
+    r"\newcommand{\cventry}[4]{\textbf{#1} \hfill #2\\\textit{#3} \hfill #4}" + "\n"
+    r"\newenvironment{cvitemize}{\begin{list}{$\bullet$}"
+    r"{\setlength{\itemsep}{0pt}\setlength{\topsep}{2pt}\setlength{\parsep}{1.5pt}"
+    r"\setlength{\leftmargin}{14pt}}}{\end{list}}" + "\n"
+    r"\begin{document}" + "\n"
+    r"\small" + "\n"
+)
 
 
 def _dates(start: str, end: str) -> str:
-    return f"{_e(start)} -- {_e(end)}"
+    return f"{start} -- {end}"
 
 
 def _job(j: JobExperience) -> str:
     header = (
-        f"\\cventry{{{_e(j.company)}}}{{{_e(j.location)}}}"
-        f"{{{_e(j.position)}}}{{{_dates(j.start_date, j.end_date)}}}"
+        f"\\cventry{{{j.company}}}{{{j.location}}}"
+        f"{{{j.position}}}{{{_dates(j.start_date, j.end_date)}}}"
     )
     if not j.bullets:
         return header
@@ -73,8 +60,8 @@ def _job(j: JobExperience) -> str:
 
 def _edu(e: Education) -> str:
     out = (
-        f"\\cventry{{{_e(e.institution)}}}{{{_e(e.location)}}}"
-        f"{{{_e(e.degree)}}}{{{_dates(e.start_date, e.end_date)}}}"
+        f"\\cventry{{{e.institution}}}{{{e.location}}}"
+        f"{{{e.degree}}}{{{_dates(e.start_date, e.end_date)}}}"
     )
     extras = []
     if e.thesis:
@@ -82,29 +69,29 @@ def _edu(e: Education) -> str:
     if e.coursework:
         extras.append(f"\\textbf{{Coursework:}} {e.coursework}.")
     if e.gpa:
-        extras.append(f"\\textbf{{GPA:}} {_e(e.gpa)}.")
+        extras.append(f"\\textbf{{GPA:}} {e.gpa}.")
     if extras:
         out += "\\\\[2pt]\n{\\footnotesize " + " ".join(extras) + "}"
     return out
 
 
 def _skill(s: SkillSection) -> str:
-    return f"\\textbf{{{_e(s.title)}:}} {s.items}"
+    return f"\\textbf{{{s.title}:}} {s.items}"
 
 
 def _project(p: Project) -> str:
-    line = f"\\textbf{{{_e(p.name)}}} --- {p.description}"
+    line = f"\\textbf{{{p.name}}} --- {p.description}"
     if p.url:
-        line += f" \\href{{{p.url}}}{{{_e(p.url)}}}"
+        line += f" \\href{{{p.url}}}{{{escape_tex(p.url)}}}"
     return line
 
 
 def _award(a: Award) -> str:
     parts = [a.title]
     if a.issuer:
-        parts.append(_e(a.issuer))
+        parts.append(a.issuer)
     if a.date:
-        parts.append(_e(a.date))
+        parts.append(a.date)
     return " --- ".join(parts)
 
 
@@ -112,17 +99,16 @@ def _section(title: str, entries: list[str], sep: str) -> str:
     return f"\\cvsection{{{title}}}\n" + sep.join(entries)
 
 
-def cv_to_latex(cv: CurriculumVitae, layout: LayoutOverrides | None = None) -> str:
-    layout = layout or DEFAULT_LAYOUT
-    contact = [_e(cv.location), f"\\href{{mailto:{cv.email}}}{{{_e(cv.email)}}}"]
+def cv_to_latex(cv: CurriculumVitae) -> str:
+    contact = [cv.location, f"\\href{{mailto:{cv.email}}}{{{escape_tex(cv.email)}}}"]
     if cv.phone:
-        contact.append(_e(cv.phone))
+        contact.append(cv.phone)
     for link in cv.links:
-        contact.append(f"\\href{{{link}}}{{{_e(link)}}}")
+        contact.append(f"\\href{{{link}}}{{{escape_tex(link)}}}")
 
     header = (
         "\\begin{center}\n"
-        f"    {{\\LARGE \\textbf{{{_e(cv.name)}}}}}\\\\[5pt]\n"
+        f"    {{\\LARGE \\textbf{{{cv.name}}}}}\\\\[5pt]\n"
         f"    {' \\textbullet\\ '.join(contact)}\n"
         "\\end{center}\n"
         "\\vspace{4pt}\n\n"
@@ -141,4 +127,4 @@ def cv_to_latex(cv: CurriculumVitae, layout: LayoutOverrides | None = None) -> s
     if cv.awards:
         sections.append(_section("Awards and Achievements", [_award(a) for a in cv.awards], "\\\\[3pt]\n"))
 
-    return _preamble(layout) + "\n\n".join(sections) + "\n\n\\end{document}\n"
+    return _PREAMBLE + "\n\n".join(sections) + "\n\n\\end{document}\n"

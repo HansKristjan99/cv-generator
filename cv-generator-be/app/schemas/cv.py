@@ -1,6 +1,6 @@
 """CV-generation schemas: structured CV, clarifying questions, polished LaTeX, plain replies."""
 
-from typing import Literal, Union
+from typing import Union
 
 from pydantic import BaseModel, Field
 
@@ -95,14 +95,6 @@ class CurriculumVitae(BaseModel):
         ...,
         description="One entry per distinct requirement in the job description. Empty list if no JD.",
     )
-    target_pages: Literal[1, 2, 3] = Field(
-        ...,
-        description=(
-            "Target final-PDF page count. 1 = junior/mid; 2 = senior with 6+ years; "
-            "3 = staff/principal with extensive publication, patent, or large-scope leadership. "
-            "A downstream editorial pass HARD-enforces this page count."
-        ),
-    )
 
 
 class QuestionToImproveCv(BaseModel):
@@ -140,36 +132,6 @@ class OtherMessage(BaseModel):
             "Keep it short (one paragraph) unless the user explicitly asked for detail."
         ),
     )
-
-
-class LayoutOverrides(BaseModel):
-    """Knobs the EditorAgent tweaks to fit the CV to target_pages. The historic default
-    is font 10pt / margin 1.2cm / spacing 8pt. All ranges are validated server-side."""
-
-    font_size_pt: Literal[9, 10, 11, 12] = Field(
-        ..., description="Body font in pt. 10 is default. Drop to 9 to fit; raise to 11-12 to fill.",
-    )
-    margin_cm: float = Field(
-        ..., ge=0.8, le=2.5,
-        description="Page margin (cm), applied to all sides. 1.2 default; 0.8 to fit, 2.0 to spread.",
-    )
-    section_spacing_pt: int = Field(
-        ..., ge=0, le=14,
-        description="Vertical space (pt) before section headings. 8 default; 0-4 to fit, 10-14 to spread.",
-    )
-
-
-class PolishedCv(BaseModel):
-    """EditorAgent output: revised CV + layout knobs. Server re-renders + recompiles."""
-
-    cv: CurriculumVitae = Field(
-        ...,
-        description=(
-            "Revised CurriculumVitae. Preserve every fact, number, date, employer, "
-            "and title — only edit phrasing, trim or truthfully expand, and reorder."
-        ),
-    )
-    layout: LayoutOverrides = Field(..., description="Layout knobs applied at render time.")
 
 
 class CVWriterResponse(BaseModel):
