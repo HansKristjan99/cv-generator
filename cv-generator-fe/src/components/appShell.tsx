@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/react";
 
 import { ConversationPage } from "../pages/conversationPage";
@@ -11,7 +11,7 @@ import { RecentChats } from "./recentChats";
 import { cx } from "../utils/cx";
 import styles from "./appShell.module.css";
 
-type AppTab = "cv" | "templates" | "user memory";
+type AppTab = "cv" | "templates" | "user memory" | "session";
 
 const tabs: Array<{ id: AppTab; label: string; detail: string }> = [
   { id: "cv", label: "Tailor", detail: "Generator" },
@@ -23,12 +23,21 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
   const [activeTab, setActiveTab] = useState<AppTab>(initialTab);
   const { isLoaded, isSignedIn } = useAuth();
   const activeSessionId = useAppSelector((s) => s.cvGeneration.activeSessionId);
+  const setupStatus = useAppSelector((s) => s.cvGeneration.setupStatus);
+  const prevSetupStatus = useRef(setupStatus);
+
+  useEffect(() => {
+    if (prevSetupStatus.current === "loading" && setupStatus === "idle" && activeSessionId) {
+      setActiveTab("session");
+    }
+    prevSetupStatus.current = setupStatus;
+  }, [setupStatus, activeSessionId]);
 
   const handleTabClick = (tabId: AppTab) => {
     setActiveTab(tabId);
   };
 
-  const showConversation = isSignedIn && activeTab === "cv" && Boolean(activeSessionId);
+  const showConversation = isSignedIn && activeTab === "session" && Boolean(activeSessionId);
 
   return (
     <div className={styles.shell}>
@@ -65,7 +74,7 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
 
         {isSignedIn && (
           <div className={styles.recentChats}>
-            <RecentChats onOpenSession={() => setActiveTab("cv")} />
+            <RecentChats onOpenSession={() => setActiveTab("session")} />
           </div>
         )}
 
