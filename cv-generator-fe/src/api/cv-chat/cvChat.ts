@@ -9,6 +9,7 @@ import type {
 export async function sendChatMessage(input: SendChatMessageInput): Promise<StartGenerateResponse> {
   const formData = new FormData();
   formData.append("user_message", input.userMessage);
+  formData.append("kind", input.kind ?? "cv");
 
   if (input.sessionId) {
     formData.append("session_id", input.sessionId);
@@ -25,7 +26,6 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Star
     if (input.pageCount) {
       formData.append("page_count", String(input.pageCount));
     }
-    formData.append("kind", input.kind ?? "cv");
   }
 
   const response = await authFetch("/api/cv/generate/", { method: "POST", body: formData });

@@ -59,6 +59,63 @@
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.previewBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.previewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  padding: 7px 13px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  color: var(--color-ink);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.previewBtn:hover:not(:disabled) {
+  background: var(--color-bg-alt);
+  border-color: var(--color-panel-rule);
+}
+
+.previewBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.previewBtnActive,
+.previewBtnActive:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  color: var(--color-primary-deep);
+}
+
+.previewTag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  padding: 7px 13px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--color-sky);
+  color: var(--color-sky-ink-deep);
 }
 
 .status {

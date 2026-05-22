@@ -175,8 +175,14 @@ class CoverLetterAgent:
         file: Path | None = None,
         conversation_id: str | None = None,
     ) -> CoverLetterResult:
+        # A new conversation is seeded with SYSTEM_PROMPT; an existing one (e.g. a
+        # CV chat the user now asks for a cover letter in) was seeded with a
+        # different system prompt, so carry the cover-letter instructions in the turn.
+        text = prompt_input
+        if conversation_id is not None:
+            text = f"{SYSTEM_PROMPT}\n\n=== REQUEST ===\n{prompt_input}"
         parsed, conv_id = self.client.get_structured_output(
-            prompt_input,
+            text,
             CoverLetterWriterResponse,
             system_prompt=SYSTEM_PROMPT,
             file=file,
