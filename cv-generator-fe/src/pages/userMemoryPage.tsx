@@ -319,11 +319,14 @@ function renderJobSection(
           const isOpen = editor?.kind === "job_experiences" && editor.id === job.id;
           if (isOpen) return renderJobEditor(editor, setEditor, saveEditor, removeItem, saving);
           return (
-            <button
+            <CollapsedCard
               key={job.id}
-              type="button"
-              className={styles.itemCard}
-              onClick={() =>
+              title={job.job_title}
+              meta={[job.company_name, job.location, dates(job.start_date, job.end_date)]
+                .filter(Boolean)
+                .join(" · ")}
+              saving={saving}
+              onOpen={() =>
                 setEditor({
                   kind: "job_experiences",
                   id: job.id,
@@ -331,14 +334,8 @@ function renderJobSection(
                   removedChildIds: [],
                 })
               }
-            >
-              <CollapsedItem
-                title={job.job_title}
-                meta={[job.company_name, job.location, dates(job.start_date, job.end_date)]
-                  .filter(Boolean)
-                  .join(" · ")}
-              />
-            </button>
+              onDelete={() => removeItem("job_experiences", job.id)}
+            />
           );
         })}
       </div>
@@ -382,11 +379,16 @@ function renderSkillCategorySection(
             return renderSkillCategoryEditor(editor, setEditor, saveEditor, removeItem, saving);
           }
           return (
-            <button
+            <CollapsedCard
               key={category.id}
-              type="button"
-              className={styles.itemCard}
-              onClick={() =>
+              title={category.name}
+              meta={
+                category.skills.length
+                  ? category.skills.map((skill) => skill.name).join(", ")
+                  : "No skills yet"
+              }
+              saving={saving}
+              onOpen={() =>
                 setEditor({
                   kind: "skill_categories",
                   id: category.id,
@@ -394,16 +396,8 @@ function renderSkillCategorySection(
                   removedChildIds: [],
                 })
               }
-            >
-              <CollapsedItem
-                title={category.name}
-                meta={
-                  category.skills.length
-                    ? category.skills.map((skill) => skill.name).join(", ")
-                    : "No skills yet"
-                }
-              />
-            </button>
+              onDelete={() => removeItem("skill_categories", category.id)}
+            />
           );
         })}
       </div>
@@ -447,11 +441,12 @@ function renderSimpleSection(
             return renderSimpleEditor(section, editor, setEditor, saveEditor, removeItem, saving);
           }
           return (
-            <button
+            <CollapsedCard
               key={item.id}
-              type="button"
-              className={styles.itemCard}
-              onClick={() =>
+              title={section.summary(item)}
+              meta={section.meta(item)}
+              saving={saving}
+              onOpen={() =>
                 setEditor({
                   kind: section.kind,
                   id: item.id,
@@ -459,9 +454,8 @@ function renderSimpleSection(
                   removedChildIds: [],
                 })
               }
-            >
-              <CollapsedItem title={section.summary(item)} meta={section.meta(item)} />
-            </button>
+              onDelete={() => removeItem(section.kind, item.id)}
+            />
           );
         })}
       </div>
@@ -738,12 +732,36 @@ function SectionHeader({
   );
 }
 
-function CollapsedItem({ title, meta }: { title: string; meta: string }) {
+function CollapsedCard({
+  title,
+  meta,
+  saving,
+  onOpen,
+  onDelete,
+}: {
+  title: string;
+  meta: string;
+  saving: boolean;
+  onOpen: () => void;
+  onDelete: () => void;
+}) {
   return (
-    <>
-      <span className={styles.itemTitle}>{title || "Untitled"}</span>
-      {meta ? <span className={styles.itemMeta}>{meta}</span> : null}
-    </>
+    <div className={styles.itemCard}>
+      <button type="button" className={styles.itemCardBody} onClick={onOpen}>
+        <span className={styles.itemTitle}>{title || "Untitled"}</span>
+        {meta ? <span className={styles.itemMeta}>{meta}</span> : null}
+      </button>
+      <button
+        type="button"
+        className={styles.deleteButton}
+        onClick={onDelete}
+        disabled={saving}
+        aria-label={`Delete ${title || "item"}`}
+        title="Delete"
+      >
+        ×
+      </button>
+    </div>
   );
 }
 

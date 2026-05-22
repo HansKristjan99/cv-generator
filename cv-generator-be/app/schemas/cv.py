@@ -35,7 +35,8 @@ class JobExperience(BaseModel):
         description=(
             "One achievement per bullet, Google X-Y-Z format: "
             "'Accomplished X, as measured by Y, by doing Z.' "
-            "Lead with a strong verb, quantify impact (%, $, count, time), keep to one line."
+            "Lead with a strong verb, quantify impact (%, $, count, time); keep it short — "
+            "one line ideal, two or three only when needed."
         ),
     )
 
