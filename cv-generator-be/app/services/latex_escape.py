@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from app.schemas import (
     Award,
+    CoverLetter,
     CurriculumVitae,
     Education,
     JobExperience,
@@ -107,4 +108,24 @@ def escape_cv_for_latex(cv: CurriculumVitae) -> CurriculumVitae:
         "skills":     [_skill(s) for s in cv.skills],
         "projects":   [_project(p) for p in cv.projects],
         "awards":     [_award(a) for a in cv.awards],
+    })
+
+
+def escape_cover_letter_for_latex(cl: CoverLetter) -> CoverLetter:
+    """Return a deep copy of *cl* with all plaintext fields escaped for LaTeX.
+
+    ``email`` and ``linkedin`` are left raw; the template escapes those for the
+    display side of ``\\href`` itself.
+    """
+    return cl.model_copy(update={
+        "name":      escape_tex(cl.name),
+        "title":     escape_tex(cl.title),
+        "phone":     _opt(cl.phone),
+        "location":  escape_tex(cl.location),
+        # email, linkedin: raw — used as URLs.
+        "recipient": escape_tex(cl.recipient),
+        "company":   escape_tex(cl.company),
+        "greeting":  escape_tex(cl.greeting),
+        "body":      escape_tex(cl.body),
+        "closer":    escape_tex(cl.closer),
     })

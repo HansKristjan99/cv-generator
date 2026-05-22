@@ -95,7 +95,7 @@ def get_session_messages(
 
     latest_pdf_base64: str | None = None
     for m in reversed(msgs):
-        if m.role == "assistant" and m.content.get("type") == "cv":
+        if m.role == "assistant" and m.content.get("type") in ("cv", "cover_letter"):
             latest_pdf_base64 = m.content.get("pdf_base64") or None
             break
 

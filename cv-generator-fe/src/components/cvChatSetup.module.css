@@ -418,8 +418,21 @@
   gap: 8px;
 }
 
+.startButtons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .start {
   composes: btnPrimary from "../primitives/primitives.module.css";
+  padding: 12px 22px;
+  font-size: 0.9rem;
+}
+
+.startSecondary {
+  composes: btnSecondary from "../primitives/primitives.module.css";
   padding: 12px 22px;
   font-size: 0.9rem;
 }

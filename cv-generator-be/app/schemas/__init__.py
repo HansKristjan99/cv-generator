@@ -7,6 +7,7 @@ structured outputs require every property in `required`, so optionality is expre
 through the nullable type, not through a default.
 """
 
+from app.schemas.cover_letter import CoverLetter, CoverLetterWriterResponse
 from app.schemas.cv import (
     Award,
     CurriculumVitae,
@@ -36,6 +37,8 @@ from app.schemas.memory import (
 
 __all__ = [
     "Award",
+    "CoverLetter",
+    "CoverLetterWriterResponse",
     "CurriculumVitae",
     "CVWriterResponse",
     "Education",

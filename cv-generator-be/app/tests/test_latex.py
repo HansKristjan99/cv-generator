@@ -1,5 +1,6 @@
-from app.schemas import CurriculumVitae, Education, JobExperience
-from app.services.latex import cv_to_latex
+from app.schemas import CoverLetter, CurriculumVitae, Education, JobExperience
+from app.services.latex import cover_letter_to_latex, cv_to_latex
+from app.services.latex_escape import escape_cover_letter_for_latex
 
 
 def test_cv_to_latex() -> None:
@@ -54,3 +55,33 @@ def test_cv_to_latex() -> None:
     latex_str = cv_to_latex(cv)
     assert "\\begin{document}" in latex_str
     assert "\\end{document}" in latex_str
+
+
+def test_cover_letter_to_latex() -> None:
+    cl = CoverLetter(
+        name="Test Person",
+        title="Software Engineer",
+        email="test@example.com",
+        phone=None,
+        location="Tallinn, Estonia",
+        linkedin="https://linkedin.com/in/testperson",
+        recipient="Hiring Team",
+        company="Acme & Sons",
+        greeting="Dear",
+        body=(
+            "Opening paragraph with a hook and 50% growth.\n\n"
+            "Second paragraph: shipped X, measured by Y.\n\n"
+            "Third paragraph about collaboration & communication.\n\n"
+            "Closing paragraph with motivation."
+        ),
+        closer="Sincerely",
+    )
+    latex_str = cover_letter_to_latex(escape_cover_letter_for_latex(cl))
+    assert "\\begin{document}" in latex_str
+    assert "\\end{document}" in latex_str
+    # JD/company free text must be LaTeX-escaped, not raw.
+    assert "Acme \\& Sons" in latex_str
+    assert "50\\%" in latex_str
+    assert "Dear Hiring Team," in latex_str
+    # email goes into an \href display position escaped, mailto raw.
+    assert "mailto:test@example.com" in latex_str
