@@ -16,6 +16,7 @@ export function ConversationPage() {
   const showPdf = Boolean(latestPdfBase64);
   const activeSession = chatSessions.find((s) => s.id === activeSessionId);
   const title = activeSession?.title ?? "Conversation";
+  const pageCount = activeSession?.page_count;
 
   return (
     <section className={cx(styles.page, showPdf && styles.pageWide)}>
@@ -29,6 +30,11 @@ export function ConversationPage() {
           <h1 className={styles.title}>{title}</h1>
         </div>
         <div className={styles.headerActions}>
+          {pageCount ? (
+            <span className={styles.lengthBadge}>
+              {pageCount} {pageCount === 1 ? "page" : "pages"}
+            </span>
+          ) : null}
           <button
             type="button"
             className={styles.reset}

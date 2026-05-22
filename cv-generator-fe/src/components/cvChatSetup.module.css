@@ -263,6 +263,97 @@
   color: var(--color-muted);
 }
 
+/* ---- CV length picker ---- */
+.length {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lengthHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lengthLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.lengthHint {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+.lengthOptions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+.lengthChip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-input);
+  background: var(--color-card);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lengthChip:hover {
+  border-color: var(--color-mint-deep);
+}
+
+.lengthChipOn {
+  border-color: var(--color-primary);
+  background: var(--color-mint);
+  box-shadow: var(--focus-ring);
+}
+
+.lengthChipValue {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-alt);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--color-mint-ink);
+}
+
+.lengthChipOn .lengthChipValue {
+  background: var(--color-card);
+  color: var(--color-primary-deep);
+}
+
+.lengthChipText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lengthChipTitle {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.lengthChipDesc {
+  font-size: 0.74rem;
+  color: var(--color-muted);
+}
+
 /* ---- Footer action row ---- */
 .actions {
   display: flex;
@@ -362,6 +453,10 @@
   }
 
   .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lengthOptions {
     grid-template-columns: 1fr;
   }
 }

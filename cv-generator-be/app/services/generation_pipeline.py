@@ -1,4 +1,4 @@
-"""Background-task orchestration: WriterAgent → (EditorAgent if CV) → persist.
+"""Background-task orchestration: WriterAgent → escape → compile → persist.
 
 Owns the end-to-end flow once the HTTP route has queued the job. Keeps `api/cv.py`
 focused on routing/DTOs only.
@@ -9,20 +9,19 @@ from __future__ import annotations
 import base64
 import logging
 import uuid
-from collections.abc import Callable
 from pathlib import Path
 
 from pydantic import BaseModel
 
-from app.agents import EditorAgent, SessionTitleAgent, WriterAgent
+from app.agents import SessionTitleAgent, WriterAgent
 from app.config import MODEL
 from app.db import SessionLocal
 from app.models import CvSession, Message, User
 from app.schemas import CurriculumVitae, OtherMessage, QuestionsToImproveCv
 from app.services.latex import compile_latex_to_pdf, cv_to_latex
+from app.services.latex_escape import escape_cv_for_latex
 from app.services.openai_client import OpenAIClient
-from app.services.templates.default import DEFAULT_LAYOUT
-from app.services.user_data import format_user_data, update_user_memory
+from app.services.user_data import update_user_memory
 
 logger = logging.getLogger(__name__)
 
@@ -32,23 +31,31 @@ class PipelineResult(BaseModel):
     asst_message: dict
 
 
-def _run_writer_and_editor(
+def _run_writer(
     client: OpenAIClient,
     prompt_input: str,
     file_path: Path | None,
     openai_conversation_id: str | None,
     template_slug: str,
-    job_description: str | None,
-    memory_provider: Callable[[], str],
+    page_count: int,
 ) -> tuple[PipelineResult, object]:
-    """Returns (result, writer_response_content) so the caller can update memory."""
+    """Single-pass: writer returns a CV / questions / message; the CV path is escaped
+    deterministically and compiled once. Returns ``(result, original_writer_content)``
+    so the caller can update memory from the unescaped CV.
+    """
     writer = WriterAgent(client)
-    out = writer.run(prompt_input, file=file_path, conversation_id=openai_conversation_id)
+    out = writer.run(
+        prompt_input,
+        target_pages=page_count,
+        template_slug=template_slug,
+        file=file_path,
+        conversation_id=openai_conversation_id,
+    )
     content = out.response.content
     conv_id = out.conversation_id
 
     if isinstance(content, QuestionsToImproveCv):
-        result = PipelineResult(
+        return PipelineResult(
             conversation_id=conv_id,
             asst_message={
                 "role": "assistant",
@@ -56,48 +63,35 @@ def _run_writer_and_editor(
                 "content": "",
                 "questions": [q.model_dump() for q in content.questions],
             },
-        )
-        return result, content
+        ), content
 
     if isinstance(content, OtherMessage):
-        result = PipelineResult(
+        return PipelineResult(
             conversation_id=conv_id,
             asst_message={"role": "assistant", "type": "text", "content": content.text},
-        )
-        return result, content
+        ), content
 
     assert isinstance(content, CurriculumVitae)
-    initial_latex = cv_to_latex(content, template_slug, DEFAULT_LAYOUT)
-    initial = compile_latex_to_pdf(initial_latex)
-    if not initial.success:
-        logger.error("Initial CV compilation failed: %s", initial.error)
-
-    edit = EditorAgent(client, memory_provider=memory_provider).run(
-        cv=content,
-        layout=DEFAULT_LAYOUT,
-        template_slug=template_slug,
-        initial_compile=initial,
-        target_pages=content.target_pages,
-        job_description=job_description,
-    )
-    final_latex = edit.latex
-    final_pdf = edit.pdf_bytes
-    pdf_b64 = base64.b64encode(final_pdf).decode() if final_pdf else ""
+    escaped = escape_cv_for_latex(content)
+    latex = cv_to_latex(escaped, template_slug)
+    compiled = compile_latex_to_pdf(latex)
+    if not compiled.success:
+        logger.error("CV compilation failed: %s", compiled.error)
+    pdf_b64 = base64.b64encode(compiled.pdf_bytes).decode() if compiled.pdf_bytes else ""
     logger.info(
-        "Editor done iterations=%d page_count=%d target=%d hit=%s",
-        edit.iterations, edit.page_count, content.target_pages, edit.hit_target,
+        "WriterAgent CV compiled: success=%s page_count=%d required=%d",
+        compiled.success, compiled.page_count, page_count,
     )
 
-    result = PipelineResult(
+    return PipelineResult(
         conversation_id=conv_id,
         asst_message={
             "role": "assistant",
             "type": "cv",
-            "content": final_latex,
+            "content": latex,
             "pdf_base64": pdf_b64,
         },
-    )
-    return result, content
+    ), content
 
 
 def run_pipeline(
@@ -111,6 +105,7 @@ def run_pipeline(
     user_message_text: str,
     job_description: str | None,
     cv_text: str | None,
+    page_count: int,
 ) -> None:
     db = SessionLocal()
     try:
@@ -124,10 +119,9 @@ def run_pipeline(
 
         try:
             client = OpenAIClient(MODEL)
-            result, writer_content = _run_writer_and_editor(
-                client, prompt_input, file_path, openai_conversation_id,
-                template_slug, job_description,
-                memory_provider=lambda: format_user_data(db, user_id),
+            result, writer_content = _run_writer(
+                client, prompt_input, file_path, openai_conversation_id, template_slug,
+                page_count,
             )
 
             if cv_session.conversation_id.startswith("pending-"):

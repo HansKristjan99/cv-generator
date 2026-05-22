@@ -1,6 +1,12 @@
-"""Rover CV template — styled two-tone layout with colored section rules."""
+"""Rover CV template — styled two-tone layout with colored section rules.
+
+Free-text fields on the input CurriculumVitae are assumed to be already escaped
+for LaTeX. URL-position values (email, links, project.url) come in raw and are
+escaped here only where used as display text inside ``\\href{URL}{display}``.
+"""
 
 from app.schemas import Award, CurriculumVitae, Education, JobExperience, Project, SkillSection
+from app.services.latex_escape import escape_tex
 
 _PREAMBLE = r"""\documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
@@ -27,31 +33,15 @@ _PREAMBLE = r"""\documentclass[11pt]{article}
 \begin{document}
 """
 
-_ESCAPE = str.maketrans({
-    "&": r"\&",
-    "%": r"\%",
-    "$": r"\$",
-    "#": r"\#",
-    "_": r"\_",
-    "{": r"\{",
-    "}": r"\}",
-    "~": r"\textasciitilde{}",
-    "^": r"\textasciicircum{}",
-})
-
-
-def _e(s: str) -> str:
-    return s.translate(_ESCAPE)
-
 
 def _dates(start: str, end: str) -> str:
-    return f"{_e(start)} -- {_e(end)}"
+    return f"{start} -- {end}"
 
 
 def _job(j: JobExperience) -> str:
     lines = [
-        f"\\subsection{{{_e(j.company)} \\hfill {_dates(j.start_date, j.end_date)}}}",
-        f"\\subsubsection{{{_e(j.position)} \\hfill {_e(j.location)}}}",
+        f"\\subsection{{{j.company} \\hfill {_dates(j.start_date, j.end_date)}}}",
+        f"\\subsubsection{{{j.position} \\hfill {j.location}}}",
     ]
     if j.bullets:
         bullet_items = "\n".join(f"    \\item {b}" for b in j.bullets)
@@ -61,11 +51,11 @@ def _job(j: JobExperience) -> str:
 
 def _edu(e: Education) -> str:
     lines = [
-        f"\\subsection{{{_e(e.institution)} $|$ {{\\normalfont\\textit{{{_e(e.degree)}}}}} \\hfill {_e(e.end_date)}}}",
+        f"\\subsection{{{e.institution} $|$ {{\\normalfont\\textit{{{e.degree}}}}} \\hfill {e.end_date}}}",
     ]
     items: list[str] = []
     if e.gpa:
-        items.append(f"GPA: {_e(e.gpa)}")
+        items.append(f"GPA: {e.gpa}")
     if e.coursework:
         items.append(f"Related Coursework: {e.coursework}")
     if e.thesis:
@@ -77,13 +67,13 @@ def _edu(e: Education) -> str:
 
 
 def _skill(s: SkillSection) -> str:
-    return f"    \\item[\\textbf{{{_e(s.title)}}}] {s.items}"
+    return f"    \\item[\\textbf{{{s.title}}}] {s.items}"
 
 
 def _project(p: Project) -> str:
-    name_part = _e(p.name)
+    name_part = p.name
     if p.url:
-        name_part += f" {{\\normalfont $|$ \\href{{{p.url}}}{{\\textit{{{_e(p.url)}}}}}}}"
+        name_part += f" {{\\normalfont $|$ \\href{{{p.url}}}{{\\textit{{{escape_tex(p.url)}}}}}}}"
     lines = [f"\\subsection{{{name_part}}}"]
     if p.description:
         lines.append(f"\\begin{{itemize}}\n    \\item {p.description}\n\\end{{itemize}}")
@@ -93,23 +83,23 @@ def _project(p: Project) -> str:
 def _award(a: Award) -> str:
     parts = [a.title]
     if a.issuer:
-        parts.append(_e(a.issuer))
+        parts.append(a.issuer)
     if a.date:
-        parts = [f"[{_e(a.date)}] " + " --- ".join(parts)]
+        parts = [f"[{a.date}] " + " --- ".join(parts)]
         return parts[0]
     return " --- ".join(parts)
 
 
 def cv_to_latex(cv: CurriculumVitae) -> str:
-    contact_parts = [_e(cv.location), f"\\href{{mailto:{cv.email}}}{{{_e(cv.email)}}}"]
+    contact_parts = [cv.location, f"\\href{{mailto:{cv.email}}}{{{escape_tex(cv.email)}}}"]
     if cv.phone:
-        contact_parts.append(_e(cv.phone))
+        contact_parts.append(cv.phone)
     for link in cv.links:
-        contact_parts.append(f"\\href{{{link}}}{{{_e(link)}}}")
+        contact_parts.append(f"\\href{{{link}}}{{{escape_tex(link)}}}")
 
     header = (
         "\\begin{center}\n"
-        f"    {{\\fontsize{{28}}{{28}}\\selectfont {_e(cv.name)}}}\\\\ \\bigskip\n"
+        f"    {{\\fontsize{{28}}{{28}}\\selectfont {cv.name}}}\\\\ \\bigskip\n"
         f"    {' $|$ '.join(contact_parts)}\n"
         "\\end{center}\n\n"
         f"{cv.summary}"
