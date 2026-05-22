@@ -132,6 +132,8 @@ class CvSession(Base):
     status: Mapped[str] = mapped_column(Text, nullable=False, default="idle", server_default="idle")
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     job_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_cv_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_cv_pdf_base64: Mapped[str | None] = mapped_column(Text, nullable=True)
     page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     message_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     invent_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

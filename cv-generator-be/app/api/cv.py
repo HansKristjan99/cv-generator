@@ -1,5 +1,6 @@
 """`/cv/generate/` route — queue a generation job. Orchestration lives in services.generation_pipeline."""
 
+import base64
 import logging
 import uuid
 from datetime import datetime
@@ -130,6 +131,7 @@ async def generate_cv(
             raise HTTPException(413, f"Message exceeds {MAX_USER_MESSAGE_CHARS:,} character limit.")
 
         _check_session_available(current_user, db)
+        source_cv_pdf_base64: str | None = None
         if file is not None:
             file_bytes = await file.read()
             if len(file_bytes) > MAX_FILE_SIZE_BYTES:
@@ -137,11 +139,16 @@ async def generate_cv(
             with NamedTemporaryFile(delete=False, suffix=Path(file.filename or "").suffix) as tmp:
                 tmp.write(file_bytes)
                 file_path = Path(tmp.name)
+            # Persist the submitted PDF so it can be previewed later in the session.
+            if (file.content_type == "application/pdf") or (file.filename or "").lower().endswith(".pdf"):
+                source_cv_pdf_base64 = base64.b64encode(file_bytes).decode()
 
         cv_session = CvSession(
             user_id=current_user.id,
             conversation_id=f"pending-{uuid.uuid4()}",
             job_description=job_description,
+            source_cv_text=text or None,
+            source_cv_pdf_base64=source_cv_pdf_base64,
             page_count=page_count,
             kind=kind,
             message_count=1,
@@ -178,12 +185,13 @@ async def generate_cv(
         cv_session.status = "pending"
         cv_session.error = None
 
+        # `kind` stays as the per-turn value from the form, so a CV session can
+        # produce a cover letter (and vice versa) on a follow-up turn.
         prompt_input = user_message
         openai_conversation_id = cv_session.conversation_id
         user_message_text = user_message
         job_description = cv_session.job_description
         page_count = cv_session.page_count
-        kind = cv_session.kind
         text = None
 
     template_slug = _resolve_template_slug(template_id, current_user, db)

@@ -20,6 +20,8 @@ export const CvChatMessageComposer = () => {
   const draftMessage = activeConversation?.draftMessage ?? "";
   const sessionId = activeConversation?.activeSessionId ?? null;
   const messageHistory = activeConversation?.messageHistory ?? [];
+  const sessionKind =
+    activeConversation?.chatSessions.find((s) => s.id === sessionId)?.kind ?? "cv";
   const isBusy =
     activeConversation?.generationStatus === "loading" ||
     activeConversation?.enhanceStatus === "loading";
@@ -29,10 +31,22 @@ export const CvChatMessageComposer = () => {
   const messagesRemaining = MAX_MESSAGES_PER_SESSION - messagesUsed;
   const atLimit = messagesRemaining <= 0;
   const disabled = isBusy || !trimmed || atLimit || !sessionId;
+  const coverLetterDisabled = isBusy || atLimit || !sessionId;
 
   const onSend = () => {
     if (disabled) return;
-    void dispatch(sendMessage({ sessionId, userMessage: trimmed }));
+    void dispatch(sendMessage({ sessionId, userMessage: trimmed, kind: sessionKind }));
+  };
+
+  const onGenerateCoverLetter = () => {
+    if (coverLetterDisabled) return;
+    void dispatch(
+      sendMessage({
+        sessionId,
+        userMessage: trimmed || "Write a cover letter tailored to this job.",
+        kind: "cover_letter",
+      }),
+    );
   };
 
   return (
@@ -72,6 +86,17 @@ export const CvChatMessageComposer = () => {
           maxLength={MAX_USER_MESSAGE_CHARS}
           disabled={atLimit}
         />
+        {sessionKind === "cv" ? (
+          <button
+            type="button"
+            className={styles.coverLetter}
+            onClick={onGenerateCoverLetter}
+            disabled={coverLetterDisabled}
+            title="Generate a cover letter for this job"
+          >
+            Generate cover letter
+          </button>
+        ) : null}
         <button type="button" className={styles.send} onClick={onSend} disabled={disabled}>
           Send
         </button>

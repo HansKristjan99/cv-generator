@@ -2,6 +2,9 @@ export type AssistantMessageType = "text" | "question" | "cv" | "cover_letter";
 
 export type GenerationKind = "cv" | "cover_letter";
 
+/** Which artifact the conversation preview pane is currently showing. */
+export type PreviewKind = "jd" | "source_cv" | "generated_cv" | "cover_letter";
+
 export type CvQuestion = {
   question: string;
   corresponding_requirement: string;
@@ -37,6 +40,7 @@ export type SessionStatus = "idle" | "pending" | "running" | "failed";
 export type SessionSummary = {
   id: string;
   title: string | null;
+  kind: GenerationKind;
   message_count: number;
   page_count: number;
   status: SessionStatus;
@@ -46,9 +50,14 @@ export type SessionSummary = {
 
 export type LoadConversationResponse = {
   title: string | null;
+  kind: GenerationKind;
   status: SessionStatus;
   error: string | null;
   page_count: number;
   messages: ChatMessage[];
-  latest_pdf_base64: string | null;
+  job_description: string | null;
+  source_cv_text: string | null;
+  source_cv_pdf_base64: string | null;
+  latest_cv_pdf_base64: string | null;
+  latest_cover_letter_pdf_base64: string | null;
 };

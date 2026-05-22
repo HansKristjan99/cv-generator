@@ -7,6 +7,7 @@ import {
   type ChatMessage,
   type CvQuestion,
   type LoadConversationResponse,
+  type PreviewKind,
   type SendChatMessageInput,
   type SessionStatus,
   type SessionSummary,
@@ -23,7 +24,12 @@ type CvGenerationState = {
   historyStatus: Status;
   enhanceStatus: Status;
   error: string | null;
-  latestPdfBase64: string | null;
+  jobDescription: string | null;
+  sourceCvText: string | null;
+  sourceCvPdfBase64: string | null;
+  latestCvPdfBase64: string | null;
+  latestCoverLetterPdfBase64: string | null;
+  previewSelection: PreviewKind | null;
   monthlySessionsUsed: number | null;
   monthlyInventsUsed: number | null;
   isUnlimited: boolean;
@@ -39,12 +45,26 @@ const initialState: CvGenerationState = {
   historyStatus: "idle",
   enhanceStatus: "idle",
   error: null,
-  latestPdfBase64: null,
+  jobDescription: null,
+  sourceCvText: null,
+  sourceCvPdfBase64: null,
+  latestCvPdfBase64: null,
+  latestCoverLetterPdfBase64: null,
+  previewSelection: null,
   monthlySessionsUsed: null,
   monthlyInventsUsed: null,
   isUnlimited: false,
   chatSessions: [],
 };
+
+const PREVIEW_RESET = {
+  jobDescription: null,
+  sourceCvText: null,
+  sourceCvPdfBase64: null,
+  latestCvPdfBase64: null,
+  latestCoverLetterPdfBase64: null,
+  previewSelection: null,
+} as const;
 
 export const isGeneratingSession = (status: SessionStatus) =>
   status === "pending" || status === "running";
@@ -120,13 +140,16 @@ const cvGenerationSlice = createSlice({
     setDraftMessage(state, action: PayloadAction<string>) {
       state.draftMessage = action.payload;
     },
+    setPreviewSelection(state, action: PayloadAction<PreviewKind | null>) {
+      state.previewSelection = action.payload;
+    },
     setActiveSession(state, action: PayloadAction<string>) {
       if (state.activeSessionId === action.payload) return;
       state.activeSessionId = action.payload;
       state.messageHistory = [];
       state.draftMessage = "";
       state.error = null;
-      state.latestPdfBase64 = null;
+      Object.assign(state, PREVIEW_RESET);
       state.historyStatus = "idle";
       state.generationStatus = "idle";
       state.enhanceStatus = "idle";
@@ -140,7 +163,7 @@ const cvGenerationSlice = createSlice({
       state.historyStatus = "idle";
       state.enhanceStatus = "idle";
       state.error = null;
-      state.latestPdfBase64 = null;
+      Object.assign(state, PREVIEW_RESET);
     },
   },
   extraReducers: (builder) => {
@@ -171,7 +194,7 @@ const cvGenerationSlice = createSlice({
           state.activeSessionId = action.meta.arg;
           state.messageHistory = [];
           state.draftMessage = "";
-          state.latestPdfBase64 = null;
+          Object.assign(state, PREVIEW_RESET);
         }
         state.historyStatus = "loading";
         state.error = null;
@@ -179,7 +202,11 @@ const cvGenerationSlice = createSlice({
       .addCase(loadConversation.fulfilled, (state, action) => {
         if (state.activeSessionId !== action.meta.arg) return;
         state.messageHistory = action.payload.messages;
-        state.latestPdfBase64 = action.payload.latest_pdf_base64;
+        state.jobDescription = action.payload.job_description;
+        state.sourceCvText = action.payload.source_cv_text;
+        state.sourceCvPdfBase64 = action.payload.source_cv_pdf_base64;
+        state.latestCvPdfBase64 = action.payload.latest_cv_pdf_base64;
+        state.latestCoverLetterPdfBase64 = action.payload.latest_cover_letter_pdf_base64;
         state.generationStatus = toGenerationStatus(action.payload.status);
         state.error =
           action.payload.status === "failed"
@@ -240,5 +267,6 @@ const cvGenerationSlice = createSlice({
 export const selectActiveConversation = (state: RootState) =>
   state.cvGeneration.activeSessionId ? state.cvGeneration : null;
 
-export const { setDraftMessage, setActiveSession, resetChat } = cvGenerationSlice.actions;
+export const { setDraftMessage, setPreviewSelection, setActiveSession, resetChat } =
+  cvGenerationSlice.actions;
 export default cvGenerationSlice.reducer;

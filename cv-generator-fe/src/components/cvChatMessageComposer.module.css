@@ -53,6 +53,13 @@
   padding: 9px 18px;
 }
 
+.coverLetter {
+  composes: btnSecondary from "../primitives/primitives.module.css";
+  border-radius: var(--radius-pill);
+  padding: 9px 16px;
+  white-space: nowrap;
+}
+
 .limitNote {
   margin: 0;
   font-size: 0.78rem;

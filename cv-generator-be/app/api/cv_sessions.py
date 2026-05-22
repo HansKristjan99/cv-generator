@@ -31,6 +31,7 @@ def _month_start() -> datetime:
 class SessionSummary(BaseModel):
     id: str
     title: str | None
+    kind: str
     message_count: int
     page_count: int
     status: str
@@ -51,7 +52,7 @@ def list_sessions(
     ).all()
     return [
         SessionSummary(
-            id=str(s.id), title=s.title, message_count=s.message_count,
+            id=str(s.id), title=s.title, kind=s.kind, message_count=s.message_count,
             page_count=s.page_count, status=s.status, error=s.error,
             created_at=s.created_at,
         )
@@ -68,11 +69,16 @@ class ChatMessageResponse(BaseModel):
 
 class LoadConversationResponse(BaseModel):
     title: str | None
+    kind: str
     status: str
     error: str | None
     page_count: int
     messages: list[ChatMessageResponse]
-    latest_pdf_base64: str | None
+    job_description: str | None
+    source_cv_text: str | None
+    source_cv_pdf_base64: str | None
+    latest_cv_pdf_base64: str | None
+    latest_cover_letter_pdf_base64: str | None
 
 
 @router.get("/sessions/{session_id}/messages", response_model=LoadConversationResponse)
@@ -93,10 +99,17 @@ def get_session_messages(
         select(Message).where(Message.cv_session_id == cv_session.id).order_by(Message.created_at)
     ).all()
 
-    latest_pdf_base64: str | None = None
+    latest_cv_pdf_base64: str | None = None
+    latest_cover_letter_pdf_base64: str | None = None
     for m in reversed(msgs):
-        if m.role == "assistant" and m.content.get("type") in ("cv", "cover_letter"):
-            latest_pdf_base64 = m.content.get("pdf_base64") or None
+        if m.role != "assistant":
+            continue
+        m_type = m.content.get("type")
+        if m_type == "cv" and latest_cv_pdf_base64 is None:
+            latest_cv_pdf_base64 = m.content.get("pdf_base64") or None
+        elif m_type == "cover_letter" and latest_cover_letter_pdf_base64 is None:
+            latest_cover_letter_pdf_base64 = m.content.get("pdf_base64") or None
+        if latest_cv_pdf_base64 is not None and latest_cover_letter_pdf_base64 is not None:
             break
 
     messages = [
@@ -110,11 +123,16 @@ def get_session_messages(
     ]
     return LoadConversationResponse(
         title=cv_session.title,
+        kind=cv_session.kind,
         status=cv_session.status,
         error=cv_session.error,
         page_count=cv_session.page_count,
         messages=messages,
-        latest_pdf_base64=latest_pdf_base64,
+        job_description=cv_session.job_description,
+        source_cv_text=cv_session.source_cv_text,
+        source_cv_pdf_base64=cv_session.source_cv_pdf_base64,
+        latest_cv_pdf_base64=latest_cv_pdf_base64,
+        latest_cover_letter_pdf_base64=latest_cover_letter_pdf_base64,
     )
 
 
