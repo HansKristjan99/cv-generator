@@ -2,9 +2,7 @@
 
 CV_GUIDE = r"""# 2026 SWE CV Writing Guide (FAANG / Big Tech)
 
-**Core thesis:** The strongest SWE CV is **plain, evidence-dense, technically specific, and role-tailored**. Bullets prove engineering impact with metrics, scope, and technical decisions, and give an interviewer obvious deep-dive hooks.
-
-Length: 1 page for <8 yrs experience; 1–2 pages for senior/staff. Bullet-driven, impact-first, tailored per role.
+**Core thesis:** The strongest SWE CV is **plain, evidence-dense, technically specific, and role-tailored**. Bullets prove engineering impact with metrics, scope, and technical decisions, giving an interviewer obvious deep-dive hooks. The required page count is set by the user each run — fill it well; do not decide the length yourself.
 
 ---
 
@@ -12,16 +10,18 @@ Length: 1 page for <8 yrs experience; 1–2 pages for senior/staff. Bullet-drive
 
 **Technical fundamentals:** programming fluency in role languages; data structures & algorithms; testing/debugging/maintainability; software design; distributed systems, storage, networking for backend/infra; model deployment, evaluation, training/inference optimization for ML.
 
-**Engineering impact categories** — quantify against these:
+**Engineering impact categories** — quantify against these; this is also your metrics vocabulary when business numbers are absent:
 
-- **Performance:** latency (p50/p95/p99), throughput, CPU/memory, page load, cold-start.
-- **Reliability:** availability, incidents, error rate, MTTR, SLOs, failed deploys, rollback rate.
-- **Scale:** users, requests/day, events/day, data volume, services, regions, tenants.
-- **Product:** conversion, activation, retention, adoption, support tickets.
+- **Performance:** latency (p50/p95/p99), throughput/RPS, query runtime, page load, CPU/memory, bundle size, cold-start, training/inference time and cost.
+- **Reliability:** availability/uptime, incidents, error rate, MTTR, SLO compliance, failed deploys, rollback rate, data-loss events.
+- **Scale:** users (DAU/MAU), requests/day, events/day, data volume (rows, TB), services, regions, tenants.
+- **Product:** conversion, activation, retention, adoption, support-ticket reduction, funnel drop-off.
 - **Cost:** cloud spend, storage, compute, engineer hours.
-- **Quality:** escaped defects, test coverage, flaky-test rate, security findings.
-- **Developer productivity:** build time, CI runtime, deploy frequency, onboarding time.
+- **Quality:** escaped defects, test coverage, flaky-test rate, vulnerabilities remediated, regression rate, security findings.
+- **Developer productivity:** build time, CI runtime, deploy frequency, onboarding time, review cycle time, manual steps eliminated.
 - **Leadership:** mentoring, migrations, cross-team adoption, ownership scope.
+
+When exact numbers are confidential or absent, use percentages, ranges, before/after, or relative improvements. Never disclose confidential revenue, customer names, or unreleased products.
 
 **Judgment & ownership** (esp. senior): handling ambiguity, explicit tradeoffs, system-level (not ticket-level) improvements, owned production outcomes, influence without overclaiming team work.
 
@@ -42,7 +42,7 @@ Strong: `Improved Kubernetes-based deployment reliability by adding Terraform-ma
 - **No pronouns.** `Built`, `Led`, `Migrated`, `Designed`, `Optimized`, `Debugged`, `Owned`, `Mentored` — never `I`, `we`, `my team`.
 - **Direct engineering verbs:** designed, implemented, migrated, refactored, profiled, benchmarked, optimized, automated, instrumented, deployed, hardened, scaled, reduced, standardized. Avoid résumé theater (`spearheaded`, `revolutionized`, `leveraged`).
 - **Cut filler:** `worked on`, `helped with`, `responsible for`, `assisted with`, `various`, `several`, `fast-paced`, `team player`, `passionate`, `detail-oriented`. Replace with evidence.
-- **Length:** 1 line preferred, 2 if necessary, 3 only for exceptional staff-level work.
+- **Length:** keep bullets short — the shorter the better. One line is ideal; allow two, or three at most, only when the substance genuinely needs the space. Never pad to fill lines.
 - **Front-load numbers.** Impact metric appears early, before the technical action.
 - **Don't overclaim team outcomes.** Specify your part. Don't say `Built company-wide platform used by 400 engineers` when you owned one service inside it.
 - **Technically specific but externally readable.** Use industry terms (Kafka, p95, idempotency), not internal product names (`Migrated FooBarService from Wombat v2 to BluePipe`).
@@ -68,23 +68,10 @@ Strong: `Improved Kubernetes-based deployment reliability by adding Terraform-ma
 
 ---
 
-## 5. Metrics vocabulary (use when business numbers are absent)
-
-- **Performance:** p50/p95/p99 latency, RPS, throughput, query runtime, page load, CPU/memory, bundle size, cold-start, training time, inference cost.
-- **Reliability:** error rate, incident count, MTTR, uptime, SLO compliance, failed deploys, rollback rate, data-loss events.
-- **Scale:** DAU/MAU, requests/day, events/day, rows, TB processed, # services, # teams, # regions, # tenants.
-- **Quality:** escaped defects, test coverage, flaky-test rate, vulnerabilities remediated, regression rate.
-- **Developer productivity:** build time, CI runtime, deploy frequency, onboarding time, review cycle time, manual steps eliminated.
-- **Product:** adoption, conversion, activation, retention, support-ticket reduction, funnel drop-off.
-
-When exact numbers are confidential, use percentages, ranges, before/after, or relative improvements. Do not disclose confidential revenue, customer names, or unreleased products.
-
----
-
-## 6. Section structure
+## 5. Section structure
 
 - **Header:** name, city/country, email, phone, LinkedIn; GitHub/portfolio only if they reinforce the role. No photo, age, address, or "references on request".
-- **Summary (optional):** one specific line — `Backend SWE with 4 years building Java/Kubernetes payment services; distributed systems, reliability, low-latency APIs`. Skip it for students. Never use `Passionate ... seeking a challenging opportunity`.
+- **Summary:** one to a few specific lines — `Backend SWE with 4 years building Java/Kubernetes payment services; distributed systems, reliability, low-latency APIs`. Keep it short for juniors. Never use `Passionate ... seeking a challenging opportunity`.
 - **Skills:** grouped and truthful (Languages / Backend / Infrastructure / Testing). Strongest first. Don't list every tool ever touched. For seniors, skills support experience — they don't replace it.
 - **Experience:** 3–5 bullets per recent role, 1–3 for older. Strongest bullet first. Past tense for past roles. Mention technologies in context, not as decoration. No generic duty bullets.
 - **Projects:** matter most for interns, new grads, career switchers. Good projects are deployed, used, benchmarked, tested, or open source. Avoid tutorial clones and undeployed CRUD apps.
@@ -93,7 +80,7 @@ When exact numbers are confidential, use percentages, ranges, before/after, or r
 
 ---
 
-## 7. Candidate tier priorities
+## 6. Candidate tier priorities
 
 - **Intern / new grad** — prove coding ability, CS fundamentals, and ability to finish/deploy. Lead with education, then projects + internships. Three strong deployed projects beat eight shallow ones.
 - **Mid-level** — prove ownership of a feature/service, production debugging, moderate-complexity design, shipping without heavy supervision. Quantify performance, reliability, and quality.
@@ -103,7 +90,7 @@ When exact numbers are confidential, use percentages, ranges, before/after, or r
 
 ---
 
-## 8. Before/after anchors
+## 7. Before/after anchors
 
 Backend — weak: `Worked on backend APIs for customer data.`
 Strong: `Designed customer-profile API in Go with PostgreSQL indexes and Redis caching, reducing p95 lookup latency from 620ms to 180ms for 1.3M monthly users.`
@@ -113,7 +100,7 @@ Strong: `Reduced payment-service SEV2 incidents from 5/quarter to 1/quarter by a
 
 ---
 
-## 9. Remove
+## 8. Remove
 
 Objective statements; photos; age/gender/marital status/full address; "References available upon request"; skill bars; dense paragraphs; generic soft-skill claims (`passionate`, `team player`); internal acronyms without translation; tools you cannot explain; inflated or undefendable metrics; "Familiar with" lists that dilute stronger skills.
 """
