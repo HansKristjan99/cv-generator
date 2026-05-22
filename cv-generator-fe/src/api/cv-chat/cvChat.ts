@@ -25,6 +25,7 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Star
     if (input.pageCount) {
       formData.append("page_count", String(input.pageCount));
     }
+    formData.append("kind", input.kind ?? "cv");
   }
 
   const response = await authFetch("/api/cv/generate/", { method: "POST", body: formData });

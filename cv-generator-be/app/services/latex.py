@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from app.schemas import CurriculumVitae
-from app.services.templates import default, harvard_classic, rover
+from app.schemas import CoverLetter, CurriculumVitae
+from app.services.templates import cover_letter, default, harvard_classic, rover
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,10 @@ _RENDERERS: dict[str, Callable[[CurriculumVitae], str]] = {
 def cv_to_latex(cv: CurriculumVitae, template_slug: str = "default") -> str:
     renderer = _RENDERERS.get(template_slug) or _RENDERERS["default"]
     return renderer(cv)
+
+
+def cover_letter_to_latex(cl: CoverLetter) -> str:
+    return cover_letter.cover_letter_to_latex(cl)
 
 
 @dataclass

@@ -9,6 +9,7 @@ import {
 } from "../config/limits";
 import { sendMessage } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
+import type { GenerationKind } from "../types/chat";
 import { cx } from "../utils/cx";
 import styles from "./cvChatSetup.module.css";
 
@@ -56,19 +57,28 @@ export const CvChatSetup = () => {
     setCvFile(f);
   };
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const start = (kind: GenerationKind) => {
     if (!canStart) return;
+    const defaultMessage =
+      kind === "cover_letter"
+        ? "Write a cover letter tailored to this job."
+        : "Help me write a CV tailored to this job.";
     void dispatch(
       sendMessage({
         sessionId: null,
-        userMessage: openingMessage.trim() || "Help me write a CV tailored to this job.",
+        userMessage: openingMessage.trim() || defaultMessage,
         cvText,
         cvFile,
         jobDescription,
         pageCount,
+        kind,
       }),
     );
+  };
+
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    start("cv");
   };
 
   return (
@@ -220,9 +230,19 @@ export const CvChatSetup = () => {
                 : `${sessionsRemaining} of ${MAX_SESSIONS_PER_MONTH} sessions remaining this month`}
             </p>
           ) : null}
-          <button type="submit" className={styles.start} disabled={!canStart}>
-            {isLoading ? "Starting…" : "Start the chat →"}
-          </button>
+          <div className={styles.startButtons}>
+            <button
+              type="button"
+              className={styles.startSecondary}
+              onClick={() => start("cover_letter")}
+              disabled={!canStart}
+            >
+              {isLoading ? "Starting…" : "Generate a cover letter"}
+            </button>
+            <button type="submit" className={styles.start} disabled={!canStart}>
+              {isLoading ? "Starting…" : "Start the chat →"}
+            </button>
+          </div>
         </div>
       </footer>
       {setupError ? <p className={styles.error}>{setupError}</p> : null}

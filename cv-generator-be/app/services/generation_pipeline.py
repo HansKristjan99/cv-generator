@@ -13,13 +13,13 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from app.agents import SessionTitleAgent, WriterAgent
+from app.agents import CoverLetterAgent, SessionTitleAgent, WriterAgent
 from app.config import MODEL
 from app.db import SessionLocal
 from app.models import CvSession, Message, User
-from app.schemas import CurriculumVitae, OtherMessage, QuestionsToImproveCv
-from app.services.latex import compile_latex_to_pdf, cv_to_latex
-from app.services.latex_escape import escape_cv_for_latex
+from app.schemas import CoverLetter, CurriculumVitae, OtherMessage, QuestionsToImproveCv
+from app.services.latex import compile_latex_to_pdf, cover_letter_to_latex, cv_to_latex
+from app.services.latex_escape import escape_cover_letter_for_latex, escape_cv_for_latex
 from app.services.openai_client import OpenAIClient
 from app.services.user_data import update_user_memory
 
@@ -94,6 +94,48 @@ def _run_writer(
     ), content
 
 
+def _run_cover_letter(
+    client: OpenAIClient,
+    prompt_input: str,
+    file_path: Path | None,
+    openai_conversation_id: str | None,
+) -> PipelineResult:
+    """Drafts a cover letter (or a plain reply); the letter path is escaped
+    deterministically and compiled once before persisting.
+    """
+    agent = CoverLetterAgent(client)
+    out = agent.run(prompt_input, file=file_path, conversation_id=openai_conversation_id)
+    content = out.response.content
+    conv_id = out.conversation_id
+
+    if isinstance(content, OtherMessage):
+        return PipelineResult(
+            conversation_id=conv_id,
+            asst_message={"role": "assistant", "type": "text", "content": content.text},
+        )
+
+    assert isinstance(content, CoverLetter)
+    latex = cover_letter_to_latex(escape_cover_letter_for_latex(content))
+    compiled = compile_latex_to_pdf(latex)
+    if not compiled.success:
+        logger.error("Cover-letter compilation failed: %s", compiled.error)
+    pdf_b64 = base64.b64encode(compiled.pdf_bytes).decode() if compiled.pdf_bytes else ""
+    logger.info(
+        "CoverLetterAgent compiled: success=%s page_count=%d",
+        compiled.success, compiled.page_count,
+    )
+
+    return PipelineResult(
+        conversation_id=conv_id,
+        asst_message={
+            "role": "assistant",
+            "type": "cover_letter",
+            "content": latex,
+            "pdf_base64": pdf_b64,
+        },
+    )
+
+
 def run_pipeline(
     *,
     cv_session_id: uuid.UUID,
@@ -106,6 +148,7 @@ def run_pipeline(
     job_description: str | None,
     cv_text: str | None,
     page_count: int,
+    kind: str = "cv",
 ) -> None:
     db = SessionLocal()
     try:
@@ -119,25 +162,32 @@ def run_pipeline(
 
         try:
             client = OpenAIClient(MODEL)
-            result, writer_content = _run_writer(
-                client, prompt_input, file_path, openai_conversation_id, template_slug,
-                page_count,
-            )
+            if kind == "cover_letter":
+                result = _run_cover_letter(
+                    client, prompt_input, file_path, openai_conversation_id,
+                )
+            else:
+                result, writer_content = _run_writer(
+                    client, prompt_input, file_path, openai_conversation_id, template_slug,
+                    page_count,
+                )
 
             if cv_session.conversation_id.startswith("pending-"):
                 cv_session.conversation_id = result.conversation_id
 
-            user = db.get(User, user_id)
-            try:
-                update_user_memory(
-                    db, user, client, user_message_text,
-                    writer_content.model_dump_json(),
-                    source_text=cv_text,
-                    job_description=job_description,
-                    file=file_path,
-                )
-            except Exception:
-                logger.exception("update_user_memory failed; continuing")
+            # Memory extraction is CV-shaped; only the CV path feeds the stored profile.
+            if kind != "cover_letter":
+                user = db.get(User, user_id)
+                try:
+                    update_user_memory(
+                        db, user, client, user_message_text,
+                        writer_content.model_dump_json(),
+                        source_text=cv_text,
+                        job_description=job_description,
+                        file=file_path,
+                    )
+                except Exception:
+                    logger.exception("update_user_memory failed; continuing")
 
             db.add(Message(
                 cv_session_id=cv_session_id, role="assistant", content=result.asst_message,

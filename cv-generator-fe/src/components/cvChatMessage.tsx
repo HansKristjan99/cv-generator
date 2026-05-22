@@ -9,13 +9,15 @@ const roleClass = {
 } as const;
 
 export const CvChatMessage = ({ message }: { message: ChatMessage }) => {
-  if (message.type === "cv") {
+  if (message.type === "cv" || message.type === "cover_letter") {
+    const fileLabel =
+      message.type === "cover_letter" ? "cover_letter.tex · LaTeX source" : "cv.tex · LaTeX source";
     return (
       <div className={styles.row}>
         <div className={styles.avatar}>H</div>
         <div className={styles.cvCard}>
           <div className={styles.cvBar}>
-            <span className={styles.cvName}>cv.tex · LaTeX source</span>
+            <span className={styles.cvName}>{fileLabel}</span>
             <button
               type="button"
               className={styles.copy}

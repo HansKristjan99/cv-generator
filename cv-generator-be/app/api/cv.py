@@ -86,6 +86,7 @@ class GenerateForm(BaseModel):
     session_id: uuid.UUID | None = None
     template_id: str | None = None
     page_count: int = 1
+    kind: str = "cv"
 
 
 @router.post("/generate/", response_model=StartGenerateResponse, status_code=202)
@@ -102,13 +103,19 @@ async def generate_cv(
     session_id = form.session_id
     template_id = form.template_id
     page_count = form.page_count
+    kind = form.kind
 
     file_path: Path | None = None
     logger.info(
-        "generate_cv user=%s session_id=%s has_text=%s has_file=%s has_jd=%s template_id=%s",
-        current_user.id, session_id, bool(text), file is not None, bool(job_description), template_id,
+        "generate_cv user=%s session_id=%s kind=%s has_text=%s has_file=%s has_jd=%s template_id=%s",
+        current_user.id, session_id, kind, bool(text), file is not None, bool(job_description), template_id,
     )
 
+    if kind not in ("cv", "cover_letter"):
+        raise HTTPException(400, "kind must be 'cv' or 'cover_letter'.")
+    # Cover letters always render to one page; page length only applies to CVs.
+    if kind == "cover_letter":
+        page_count = 1
     if page_count not in (1, 2, 3):
         raise HTTPException(400, "page_count must be 1, 2, or 3.")
 
@@ -136,18 +143,24 @@ async def generate_cv(
             conversation_id=f"pending-{uuid.uuid4()}",
             job_description=job_description,
             page_count=page_count,
+            kind=kind,
             message_count=1,
             status="pending",
         )
 
+        default_message = (
+            "Write a cover letter tailored to this job."
+            if kind == "cover_letter"
+            else "Help me write a CV tailored to this job."
+        )
         prompt_input = (
             f"=== CANDIDATE'S STORED PROFILE ===\n{format_user_data(db, current_user.id)}\n\n"
             f"=== SOURCE TEXT ===\n{text or '(none provided)'}\n\n"
             f"=== JOB DESCRIPTION ===\n{job_description}\n\n"
-            f"=== USER MESSAGE ===\n{user_message or 'Help me write a CV tailored to this job.'}"
+            f"=== USER MESSAGE ===\n{user_message or default_message}"
         )
         openai_conversation_id = None
-        user_message_text = user_message or "Help me write a CV tailored to this job."
+        user_message_text = user_message or default_message
     else:
         if not user_message:
             raise HTTPException(400, "user_message is required on follow-up turns.")
@@ -170,6 +183,7 @@ async def generate_cv(
         user_message_text = user_message
         job_description = cv_session.job_description
         page_count = cv_session.page_count
+        kind = cv_session.kind
         text = None
 
     template_slug = _resolve_template_slug(template_id, current_user, db)
@@ -196,6 +210,7 @@ async def generate_cv(
         job_description=job_description,
         cv_text=text,
         page_count=page_count,
+        kind=kind,
     )
 
     logger.info("generate_cv queued session=%s", cv_session.id)

@@ -128,6 +128,7 @@ class CvSession(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     conversation_id: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    kind: Mapped[str] = mapped_column(Text, nullable=False, default="cv", server_default="cv")
     status: Mapped[str] = mapped_column(Text, nullable=False, default="idle", server_default="idle")
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     job_description: Mapped[str | None] = mapped_column(Text, nullable=True)

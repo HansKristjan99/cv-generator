@@ -1,4 +1,6 @@
-export type AssistantMessageType = "text" | "question" | "cv";
+export type AssistantMessageType = "text" | "question" | "cv" | "cover_letter";
+
+export type GenerationKind = "cv" | "cover_letter";
 
 export type CvQuestion = {
   question: string;
@@ -21,6 +23,8 @@ export type SendChatMessageInput = {
   jobDescription?: string;
   /** Required CV length in pages (1–3); only used when starting a new session. */
   pageCount?: number;
+  /** What to generate; defaults to "cv". Only used when starting a new session. */
+  kind?: GenerationKind;
 };
 
 export type StartGenerateResponse = {
