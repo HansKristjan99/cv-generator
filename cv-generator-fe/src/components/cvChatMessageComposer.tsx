@@ -31,22 +31,21 @@ export const CvChatMessageComposer = () => {
   const messagesRemaining = MAX_MESSAGES_PER_SESSION - messagesUsed;
   const atLimit = messagesRemaining <= 0;
   const disabled = isBusy || !trimmed || atLimit || !sessionId;
-  const coverLetterDisabled = isBusy || atLimit || !sessionId;
 
   const onSend = () => {
     if (disabled) return;
-    void dispatch(sendMessage({ sessionId, userMessage: trimmed, kind: sessionKind }));
-  };
-
-  const onGenerateCoverLetter = () => {
-    if (coverLetterDisabled) return;
-    void dispatch(
-      sendMessage({
-        sessionId,
-        userMessage: trimmed || "Write a cover letter tailored to this job.",
-        kind: "cover_letter",
-      }),
-    );
+    if (trimmed.match(/^\/cover(-letter)?\b/i)) {
+      const body = trimmed.replace(/^\/cover(-letter)?\s*/i, "").trim();
+      void dispatch(
+        sendMessage({
+          sessionId,
+          userMessage: body || "Write a cover letter tailored to this job.",
+          kind: "cover_letter",
+        }),
+      );
+    } else {
+      void dispatch(sendMessage({ sessionId, userMessage: trimmed, kind: sessionKind }));
+    }
   };
 
   return (
@@ -82,21 +81,10 @@ export const CvChatMessageComposer = () => {
               onSend();
             }
           }}
-          placeholder={atLimit ? "Session limit reached." : "Ask Hirable to refine further…  (Ctrl/⌘+Enter to send)"}
+          placeholder={atLimit ? "Session limit reached." : "Refine your CV, or /cover to generate a cover letter  (Ctrl/⌘+Enter)"}
           maxLength={MAX_USER_MESSAGE_CHARS}
           disabled={atLimit}
         />
-        {sessionKind === "cv" ? (
-          <button
-            type="button"
-            className={styles.coverLetter}
-            onClick={onGenerateCoverLetter}
-            disabled={coverLetterDisabled}
-            title="Generate a cover letter for this job"
-          >
-            Generate cover letter
-          </button>
-        ) : null}
         <button type="button" className={styles.send} onClick={onSend} disabled={disabled}>
           Send
         </button>

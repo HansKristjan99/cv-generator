@@ -1,27 +1,35 @@
 import { useEffect, useState } from "react";
 
+import type { PreviewKind } from "../types/chat";
 import { cx } from "../utils/cx";
 import styles from "./cvPreviewPane.module.css";
 
-type PreviewPaneProps = {
-  title: string;
+type TabDescriptor = {
+  kind: PreviewKind;
+  label: string;
   badge: string;
   mode: "pdf" | "text";
-  content: string;
+  content: string | null;
   downloadName?: string;
-  onClose: () => void;
 };
 
-export const CvPreviewPane = ({
-  title,
-  badge,
-  mode,
-  content,
-  downloadName = "document.pdf",
-  onClose,
-}: PreviewPaneProps) => {
+type CvPreviewPaneProps = {
+  descriptors: TabDescriptor[];
+  selection: PreviewKind | null;
+  onSelect: (kind: PreviewKind) => void;
+};
+
+export const CvPreviewPane = ({ descriptors, selection, onSelect }: CvPreviewPaneProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const dataUrl = mode === "pdf" ? `data:application/pdf;base64,${content}` : null;
+
+  const active = descriptors.find((d) => d.kind === selection && d.content)
+    ?? descriptors.find((d) => d.content)
+    ?? null;
+
+  const dataUrl =
+    active?.mode === "pdf" && active.content
+      ? `data:application/pdf;base64,${active.content}`
+      : null;
 
   useEffect(() => {
     if (!isFullscreen) return;
@@ -35,51 +43,62 @@ export const CvPreviewPane = ({
   return (
     <aside className={cx(styles.pane, isFullscreen && styles.fullscreen)}>
       <div className={styles.header}>
-        <div className={styles.heading}>
-          <h2 className={styles.title}>{title}</h2>
-          <span className={styles.badge}>{badge}</span>
+        <div className={styles.tabs}>
+          {descriptors.map((d) => (
+            <button
+              key={d.kind}
+              type="button"
+              className={cx(styles.tab, active?.kind === d.kind && styles.tabActive)}
+              onClick={() => onSelect(d.kind)}
+              disabled={!d.content}
+              title={d.content ? `View ${d.label.toLowerCase()}` : `No ${d.label.toLowerCase()} yet`}
+            >
+              {d.label}
+            </button>
+          ))}
         </div>
         <div className={styles.controls}>
-          <button
-            type="button"
-            className={styles.control}
-            onClick={() => setIsFullscreen((v) => !v)}
-            aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
-            title={isFullscreen ? "Exit full screen (Esc)" : "Full screen"}
-          >
-            {isFullscreen ? "⤡" : "⤢"}
-          </button>
-          <button
-            type="button"
-            className={styles.control}
-            onClick={onClose}
-            aria-label="Close preview"
-            title="Close preview"
-          >
-            ✕
-          </button>
+          {active && (
+            <button
+              type="button"
+              className={styles.control}
+              onClick={() => setIsFullscreen((v) => !v)}
+              aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
+              title={isFullscreen ? "Exit full screen (Esc)" : "Full screen"}
+            >
+              {isFullscreen ? "⤡" : "⤢"}
+            </button>
+          )}
         </div>
       </div>
 
-      {mode === "pdf" && dataUrl ? (
-        <iframe className={styles.frame} src={dataUrl} title={title} />
+      {active ? (
+        <>
+          {active.mode === "pdf" && dataUrl ? (
+            <iframe className={styles.frame} src={dataUrl} title={active.label} />
+          ) : (
+            <div className={styles.textBody}>
+              {active.content?.trim() ? (
+                <pre className={styles.text}>{active.content}</pre>
+              ) : (
+                <p className={styles.empty}>Nothing to show here.</p>
+              )}
+            </div>
+          )}
+
+          {active.mode === "pdf" && dataUrl ? (
+            <div className={styles.footer}>
+              <a className={styles.download} href={dataUrl} download={active.downloadName ?? "document.pdf"}>
+                ↓ Download PDF
+              </a>
+            </div>
+          ) : null}
+        </>
       ) : (
         <div className={styles.textBody}>
-          {content.trim() ? (
-            <pre className={styles.text}>{content}</pre>
-          ) : (
-            <p className={styles.empty}>Nothing to show here.</p>
-          )}
+          <p className={styles.empty}>Nothing to preview yet.</p>
         </div>
       )}
-
-      {mode === "pdf" && dataUrl ? (
-        <div className={styles.footer}>
-          <a className={styles.download} href={dataUrl} download={downloadName}>
-            ↓ Download PDF
-          </a>
-        </div>
-      ) : null}
     </aside>
   );
 };
