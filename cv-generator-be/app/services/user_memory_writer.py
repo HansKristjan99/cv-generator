@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -14,7 +15,6 @@ from app.models import (
     MemoryNote,
     Project,
     Skill,
-    SkillCategory,
     User,
 )
 from app.schemas import NewUserData
@@ -30,9 +30,9 @@ def save_new_user_data(db: Session, user: User, data: NewUserData | None) -> Non
     if data is not None:
         logger.info(
             "Memory extraction returned rows for user=%s jobs=%d education=%d "
-            "projects=%d skill_categories=%d awards=%d notes=%d",
+            "projects=%d skills=%d awards=%d notes=%d",
             user.id, len(data.job_experiences), len(data.education_experiences),
-            len(data.projects), len(data.skill_categories), len(data.awards), len(data.notes),
+            len(data.projects), len(data.skills), len(data.awards), len(data.notes),
         )
         for item in data.job_experiences:
             if not item.company_name.strip() or not item.job_title.strip():
@@ -68,25 +68,17 @@ def save_new_user_data(db: Session, user: User, data: NewUserData | None) -> Non
                 db.add(Project(user_id=user.id, **item.model_dump()))
                 changed = True
                 inserted_projects += 1
-        for category_data in data.skill_categories:
-            if not category_data.name.strip():
-                continue
-            category = SkillCategory(user_id=user.id, name=category_data.name)
-            db.add(category)
-            db.flush()
-            category_has_skill = False
-            for item in category_data.skills:
-                if item.name.strip():
-                    db.add(Skill(
-                        user_id=user.id,
-                        skill_category_id=category.id,
-                        **item.model_dump(),
-                    ))
-                    changed = True
-                    category_has_skill = True
-                    inserted_skills += 1
-            if not category_has_skill:
-                db.delete(category)
+        existing_skill_names = {
+            name.lower()
+            for name in db.scalars(select(Skill.name).where(Skill.user_id == user.id))
+        }
+        for raw_skill in data.skills:
+            name = raw_skill.strip()
+            if name and name.lower() not in existing_skill_names:
+                db.add(Skill(user_id=user.id, name=name))
+                existing_skill_names.add(name.lower())
+                changed = True
+                inserted_skills += 1
         for item in data.awards:
             if item.title.strip():
                 db.add(Award(user_id=user.id, **item.model_dump()))

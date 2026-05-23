@@ -18,7 +18,6 @@ from app.models import (  # noqa: E402, F401
     MemoryNote,
     Project,
     Skill,
-    SkillCategory,
     Template,
     User,
 )

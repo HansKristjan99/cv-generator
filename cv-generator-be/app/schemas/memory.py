@@ -32,16 +32,6 @@ class ExtractedProject(BaseModel):
     link: str | None = Field(..., description="URL, or null.")
 
 
-class ExtractedSkill(BaseModel):
-    name: str = Field(..., description="Skill name.")
-    proficiency: str | None = Field(..., description="Experience level/context, or null.")
-
-
-class ExtractedSkillCategory(BaseModel):
-    name: str = Field(..., description="Skill category name (e.g. 'Frontend', 'Backend', 'Languages').")
-    skills: list[ExtractedSkill] = Field(..., description="New skills in this category.")
-
-
 class ExtractedAward(BaseModel):
     title: str = Field(..., description="Award, achievement, publication, scholarship, grant, olympiad result, patent, or recognition.")
     issuer: str | None = Field(..., description="Granting body, publisher, competition, institution, or null.")
@@ -65,7 +55,13 @@ class NewUserData(BaseModel):
     job_experiences: list[ExtractedJobExperience] = Field(..., description="New jobs not already stored.")
     education_experiences: list[ExtractedEducationExperience] = Field(..., description="New education not already stored.")
     projects: list[ExtractedProject] = Field(..., description="New projects not already stored.")
-    skill_categories: list[ExtractedSkillCategory] = Field(..., description="New skill categories with new skills.")
+    skills: list[str] = Field(
+        ...,
+        description=(
+            "New individual skill keywords not already stored (case-insensitive). "
+            "Flat list, no categories or proficiency — e.g. ['React', 'PostgreSQL', 'Kubernetes']."
+        ),
+    )
     awards: list[ExtractedAward] = Field(..., description="New awards not already stored.")
     notes: list[ExtractedMemoryNote] = Field(
         default_factory=list,

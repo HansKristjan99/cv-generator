@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -15,7 +15,6 @@ from app.models import (
     MemoryNote,
     Project,
     Skill,
-    SkillCategory,
 )
 from app.services.auth import CurrentUser
 
@@ -64,13 +63,6 @@ class ProjectOut(BaseModel):
 class SkillOut(BaseModel):
     id: UUID
     name: str
-    proficiency: str | None
-
-
-class SkillCategoryOut(BaseModel):
-    id: UUID
-    name: str
-    skills: list[SkillOut]
 
 
 class AwardOut(BaseModel):
@@ -91,7 +83,7 @@ class UserMemoryOut(BaseModel):
     job_experiences: list[JobExperienceOut]
     education_experiences: list[EducationExperienceOut]
     projects: list[ProjectOut]
-    skill_categories: list[SkillCategoryOut]
+    skills: list[SkillOut]
     awards: list[AwardOut]
     notes: list[MemoryNoteOut]
 
@@ -137,14 +129,6 @@ class SkillPatch(StrictModel):
     id: IdIn = None
     delete: bool = False
     name: str | None = None
-    proficiency: str | None = None
-
-
-class SkillCategoryPatch(StrictModel):
-    id: IdIn = None
-    delete: bool = False
-    name: str | None = None
-    skills: list[SkillPatch] | None = None
 
 
 class AwardPatch(StrictModel):
@@ -167,7 +151,7 @@ class UserMemoryPatch(StrictModel):
     job_experiences: list[JobExperiencePatch] | None = None
     education_experiences: list[EducationExperiencePatch] | None = None
     projects: list[ProjectPatch] | None = None
-    skill_categories: list[SkillCategoryPatch] | None = None
+    skills: list[SkillPatch] | None = None
     awards: list[AwardPatch] | None = None
     notes: list[MemoryNotePatch] | None = None
 
@@ -245,10 +229,9 @@ def _load_memory(db: Session, user_id: UUID) -> UserMemoryOut:
         )
     )
     projects = list(db.scalars(select(Project).where(Project.user_id == user_id).order_by(Project.id)))
-    skill_categories = list(
-        db.scalars(select(SkillCategory).where(SkillCategory.user_id == user_id).order_by(SkillCategory.id))
+    skills = list(
+        db.scalars(select(Skill).where(Skill.user_id == user_id).order_by(func.lower(Skill.name)))
     )
-    skills = list(db.scalars(select(Skill).where(Skill.user_id == user_id).order_by(Skill.id)))
     awards = list(db.scalars(select(Award).where(Award.user_id == user_id).order_by(Award.id)))
     notes = list(db.scalars(select(MemoryNote).where(MemoryNote.user_id == user_id).order_by(MemoryNote.id)))
 
@@ -260,11 +243,6 @@ def _load_memory(db: Session, user_id: UUID) -> UserMemoryOut:
                 bullet_points=bullet.bullet_points,
                 relevant_technologies=bullet.relevant_technologies,
             )
-        )
-    skills_by_category: dict[UUID, list[SkillOut]] = {}
-    for skill in skills:
-        skills_by_category.setdefault(skill.skill_category_id, []).append(
-            SkillOut(id=skill.id, name=skill.name, proficiency=skill.proficiency)
         )
 
     return UserMemoryOut(
@@ -296,14 +274,7 @@ def _load_memory(db: Session, user_id: UUID) -> UserMemoryOut:
             ProjectOut(id=item.id, title=item.title, description=item.description, link=item.link)
             for item in projects
         ],
-        skill_categories=[
-            SkillCategoryOut(
-                id=item.id,
-                name=item.name,
-                skills=skills_by_category.get(item.id, []),
-            )
-            for item in skill_categories
-        ],
+        skills=[SkillOut(id=item.id, name=item.name) for item in skills],
         awards=[
             AwardOut(
                 id=item.id,
@@ -414,67 +385,26 @@ def _upsert_simple(
     _apply(payload, item, required, fields)
 
 
-def _upsert_skill(db: Session, user_id: UUID, category_id: UUID, payload: SkillPatch) -> None:
+def _upsert_skill(db: Session, user_id: UUID, payload: SkillPatch) -> None:
     item_id = _parse_id(payload.id, "skill")
-    required = ("name",)
-    fields = ("name", "proficiency")
     if payload.delete:
-        if item_id is None:
-            raise HTTPException(status_code=400, detail="skill id is required for delete")
-        item = db.scalar(
+        _delete_owned(db, Skill, user_id, item_id, "skill")
+        return
+
+    if item_id is None:
+        _require(payload, "skill", ("name",))
+        name = (payload.name or "").strip()
+        exists = db.scalar(
             select(Skill).where(
-                Skill.id == item_id,
-                Skill.user_id == user_id,
-                Skill.skill_category_id == category_id,
+                Skill.user_id == user_id, func.lower(Skill.name) == name.lower()
             )
         )
-        if item is None:
-            raise HTTPException(status_code=404, detail="skill not found")
-        db.delete(item)
+        if exists is None:
+            db.add(Skill(user_id=user_id, name=name))
         return
 
-    if item_id is None:
-        _require(payload, "skill", required)
-        db.add(
-            Skill(
-                user_id=user_id,
-                skill_category_id=category_id,
-                name=payload.name or "",
-                proficiency=payload.proficiency,
-            )
-        )
-        return
-
-    item = db.scalar(
-        select(Skill).where(
-            Skill.id == item_id,
-            Skill.user_id == user_id,
-            Skill.skill_category_id == category_id,
-        )
-    )
-    if item is None:
-        raise HTTPException(status_code=404, detail="skill not found")
-    _apply(payload, item, required, fields)
-
-
-def _upsert_skill_category(db: Session, user_id: UUID, payload: SkillCategoryPatch) -> None:
-    item_id = _parse_id(payload.id, "skill category")
-    if payload.delete:
-        _delete_owned(db, SkillCategory, user_id, item_id, "skill category")
-        return
-
-    if item_id is None:
-        _require(payload, "skill category", ("name",))
-        item = SkillCategory(user_id=user_id, name=payload.name or "")
-        db.add(item)
-        db.flush()
-    else:
-        item = _owned(db, SkillCategory, user_id, item_id, "skill category")
-        _apply(payload, item, ("name",), ("name",))
-
-    if payload.skills is not None:
-        for skill in payload.skills:
-            _upsert_skill(db, user_id, item.id, skill)
+    item = _owned(db, Skill, user_id, item_id, "skill")
+    _apply(payload, item, ("name",), ("name",))
 
 
 def _upsert_note(db: Session, user_id: UUID, payload: MemoryNotePatch) -> None:
@@ -529,8 +459,8 @@ def update_user_memory(
                 ("title",),
                 ("title", "description", "link"),
             )
-        for item in payload.skill_categories or []:
-            _upsert_skill_category(db, current_user.id, item)
+        for item in payload.skills or []:
+            _upsert_skill(db, current_user.id, item)
         for item in payload.awards or []:
             _upsert_simple(
                 db,

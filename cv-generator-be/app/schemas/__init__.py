@@ -29,8 +29,6 @@ from app.schemas.memory import (
     ExtractedJobExperienceBullet,
     ExtractedMemoryNote,
     ExtractedProject,
-    ExtractedSkill,
-    ExtractedSkillCategory,
     MemoryExtraction,
     NewUserData,
 )
@@ -48,8 +46,6 @@ __all__ = [
     "ExtractedJobExperienceBullet",
     "ExtractedMemoryNote",
     "ExtractedProject",
-    "ExtractedSkill",
-    "ExtractedSkillCategory",
     "InventedAnswer",
     "InventedExperience",
     "JobExperience",

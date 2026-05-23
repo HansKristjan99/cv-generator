@@ -89,24 +89,17 @@ class Project(Base):
     link: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class SkillCategory(Base):
-    __tablename__ = "skill_categories"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    name: Mapped[str] = mapped_column(Text, nullable=False)
-
-
 class Skill(Base):
+    """A single skill keyword. Stored flat as a per-user keyword cloud; the CV
+    writer groups them into sections at generation time."""
+
     __tablename__ = "skills"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    skill_category_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("skill_categories.id", ondelete="CASCADE"), nullable=False
-    )
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    proficiency: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_skills_user_id_name"),)
 
 
 class Award(Base):
