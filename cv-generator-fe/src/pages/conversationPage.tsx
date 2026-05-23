@@ -10,7 +10,6 @@ import {
 } from "../features/cvGeneration/cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import type { PreviewKind } from "../types/chat";
-import chatStyles from "../components/cvChat.module.css";
 import styles from "./cvGeneratorPage.module.css";
 
 type PreviewDescriptor = {
@@ -82,17 +81,19 @@ export function ConversationPage() {
         </div>
       </header>
 
-      <section className={styles.panelGrid}>
-        <div className={chatStyles.chat}>
-          <CvChatHeader />
-          <CvChatMessageList />
-          <CvChatMessageComposer />
-        </div>
+      <section className={styles.sessionStack}>
         <CvPreviewPane
           descriptors={descriptors}
           selection={previewSelection}
-          onSelect={(kind: PreviewKind) => dispatch(setPreviewSelection(kind))}
+          onSelect={(kind: PreviewKind | null) => dispatch(setPreviewSelection(kind))}
           onEdit={(kind) => setEditingKind(kind)}
+          chatContent={
+            <>
+              <CvChatHeader />
+              <CvChatMessageList />
+            </>
+          }
+          composer={<CvChatMessageComposer />}
         />
       </section>
 

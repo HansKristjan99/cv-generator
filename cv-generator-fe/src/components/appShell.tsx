@@ -13,10 +13,10 @@ import styles from "./appShell.module.css";
 
 type AppTab = "cv" | "templates" | "user memory" | "session";
 
-const tabs: Array<{ id: AppTab; label: string; detail: string }> = [
-  { id: "cv", label: "New CV", detail: "Generator" },
-  { id: "templates", label: "Templates", detail: "CV layouts" },
-  { id: "user memory", label: "Memory", detail: "Profile data" },
+const tabs: Array<{ id: AppTab; label: string }> = [
+  { id: "cv", label: "New CV" },
+  { id: "templates", label: "Templates" },
+  { id: "user memory", label: "Memory" },
 ];
 
 export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
@@ -45,13 +45,13 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
         <div className={styles.brand}>
           <div className={styles.brandTile}>H</div>
           <div>
-            <p className={styles.brandName}>Hirable</p>
-            <p className={styles.brandTag}>your cv editor</p>
+            <p className={styles.brandName}>Hireable</p>
+            <p className={styles.brandTag}>Fine tune your CV</p>
           </div>
         </div>
 
         <nav className={styles.tabs} aria-label="Workspace tabs">
-          {tabs.map((tab, index) => {
+          {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -61,10 +61,8 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
                 aria-current={isActive ? "page" : undefined}
                 onClick={() => handleTabClick(tab.id)}
               >
-                <span className={styles.tabNum}>{`0${index + 1}`}</span>
                 <span className={styles.tabText}>
                   <span className={styles.tabLabel}>{tab.label}</span>
-                  <span className={styles.tabDetail}>{tab.detail}</span>
                 </span>
                 {isActive ? <span className={styles.tabDot} /> : null}
               </button>

@@ -73,43 +73,23 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
-.editBtn {
+.actionButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 28px;
   padding: 0 12px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--color-rule);
   background: transparent;
-  color: var(--color-primary-deep);
+  color: var(--color-muted-deep);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
-}
-
-.editBtn:hover {
-  background: var(--color-primary);
-  color: #ffffff;
-}
-
-.control {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 1px solid var(--color-rule);
-  background: transparent;
-  color: var(--color-muted-deep);
-  font-size: 0.85rem;
   line-height: 1;
   transition:
     background 0.15s ease,
@@ -117,10 +97,36 @@
     color 0.15s ease;
 }
 
-.control:hover {
+.actionButton:hover {
   background: var(--color-bg-alt);
   border-color: var(--color-panel-rule);
   color: var(--color-ink);
+}
+
+.editBtn {
+  composes: actionButton;
+}
+
+.control {
+  composes: actionButton;
+  width: 30px;
+  font-size: 0.85rem;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  background: var(--color-bg-alt);
+}
+
+.chatView {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card);
 }
 
 .frame {
@@ -153,16 +159,12 @@
   font-size: 0.9rem;
 }
 
-.footer {
-  display: flex;
-  justify-content: flex-end;
-  padding: 12px 18px;
-  border-top: 1px solid var(--color-rule-soft);
+.composerSlot {
+  flex-shrink: 0;
+  background: var(--color-card);
 }
 
 .download {
-  composes: btnPrimary from "../primitives/primitives.module.css";
-  border-radius: var(--radius-pill);
-  padding: 9px 18px;
+  composes: actionButton;
   text-decoration: none;
 }

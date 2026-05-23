@@ -13,11 +13,6 @@
   gap: var(--space-3);
 }
 
-.step {
-  composes: pillMint from "../primitives/primitives.module.css";
-  align-self: flex-start;
-}
-
 .heroTitle {
   margin: 0;
   font-family: var(--font-display);
@@ -31,14 +26,6 @@
 .heroTitle em {
   font-style: italic;
   color: var(--color-primary);
-}
-
-.heroSub {
-  margin: 0;
-  max-width: 660px;
-  color: var(--color-muted);
-  font-size: 0.95rem;
-  line-height: 1.55;
 }
 
 /* ---- 2-column field grid ---- */

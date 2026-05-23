@@ -8,10 +8,11 @@ import { useAppDispatch, useAppSelector } from "../hooks";
 import styles from "./cvChatMessageComposer.module.css";
 
 const PROMPT_CHIPS = [
-  "Make it more concise",
-  "Quantify my impact",
-  "Match the job's tone",
-  "Improve ATS keyword coverage",
+  { label: "Make it more concise", message: "Make it more concise" },
+  { label: "Quantify my impact", message: "Quantify my impact" },
+  { label: "Match the job's tone", message: "Match the job's tone" },
+  { label: "Improve ATS keyword coverage", message: "Improve ATS keyword coverage" },
+  { label: "/cover", message: "/cover" },
 ];
 
 export const CvChatMessageComposer = () => {
@@ -58,13 +59,13 @@ export const CvChatMessageComposer = () => {
         <div className={styles.chips}>
           {PROMPT_CHIPS.map((chip) => (
             <button
-              key={chip}
+              key={chip.label}
               type="button"
               className={styles.chip}
-              onClick={() => dispatch(setDraftMessage(chip))}
+              onClick={() => dispatch(setDraftMessage(chip.message))}
             >
               <span aria-hidden="true">↳</span>
-              {chip}
+              {chip.label}
             </button>
           ))}
         </div>
@@ -81,7 +82,7 @@ export const CvChatMessageComposer = () => {
               onSend();
             }
           }}
-          placeholder={atLimit ? "Session limit reached." : "Refine your CV, or /cover to generate a cover letter  (Ctrl/⌘+Enter)"}
+          placeholder={atLimit ? "Session limit reached." : "Refine your CV, or /cover to generate a cover letter (Ctrl/⌘+Enter)"}
           maxLength={MAX_USER_MESSAGE_CHARS}
           disabled={atLimit}
         />

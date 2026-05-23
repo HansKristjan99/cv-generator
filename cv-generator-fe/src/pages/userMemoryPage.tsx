@@ -255,7 +255,7 @@ export function UserMemoryPage() {
           </div>
           <h1 className={styles.title}>Memory</h1>
           <p className={styles.subtitle}>
-            Edit the facts Hirable can reuse when tailoring your CV.
+            Edit the facts Hireable can reuse when tailoring your CV.
           </p>
         </div>
         <span className={styles.status}>

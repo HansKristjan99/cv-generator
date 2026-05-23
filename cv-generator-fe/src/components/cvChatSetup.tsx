@@ -57,12 +57,9 @@ export const CvChatSetup = () => {
     setCvFile(f);
   };
 
-  const start = (kind: GenerationKind) => {
+  const start = () => {
     if (!canStart) return;
-    const defaultMessage =
-      kind === "cover_letter"
-        ? "Write a cover letter tailored to this job."
-        : "Help me write a CV tailored to this job.";
+    const defaultMessage = "Help me write a CV tailored to this job.";
     void dispatch(
       sendMessage({
         sessionId: null,
@@ -71,27 +68,21 @@ export const CvChatSetup = () => {
         cvFile,
         jobDescription,
         pageCount,
-        kind,
       }),
     );
   };
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    start("cv");
+    start();
   };
 
   return (
     <form className={styles.setup} onSubmit={onSubmit}>
       <header className={styles.hero}>
-        <span className={styles.step}>Step 1 of 2</span>
         <h2 className={styles.heroTitle}>
-          Paste what you have. Hirable does the <em>close reading</em>.
+          Drop in what you have, Hireable will take over from there.
         </h2>
-        <p className={styles.heroSub}>
-          Drop in your existing CV and the job description. Hirable rereads both like an editor —
-          keeping what fits, sharpening what's vague, and tracing every change back to the listing.
-        </p>
       </header>
 
       <div className={styles.grid}>
@@ -119,7 +110,7 @@ export const CvChatSetup = () => {
             <span className={styles.dropText}>
               <span className={styles.dropTitle}>{cvFile ? cvFile.name : "Or drop in a PDF"}</span>
               <span className={styles.dropHint}>
-                PDF up to {MAX_FILE_SIZE_MB} MB · Hirable parses it cleanly
+                PDF up to {MAX_FILE_SIZE_MB} MB · Hireable parses it cleanly
               </span>
             </span>
             <span className={styles.dropBrowse}>Browse</span>
@@ -147,7 +138,7 @@ export const CvChatSetup = () => {
             className={styles.textarea}
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
-            placeholder="Paste the job posting here — the fuller the listing, the sharper Hirable gets."
+            placeholder="Paste the job posting here — the fuller the listing, the sharper Hireable gets."
             rows={13}
             maxLength={MAX_JOB_DESCRIPTION_CHARS}
           />
@@ -182,14 +173,14 @@ export const CvChatSetup = () => {
           type="text"
           value={openingMessage}
           onChange={(e) => setOpeningMessage(e.target.value)}
-          placeholder="Tell Hirable which angle to chase…"
+          placeholder="Tell Hireable which angle to chase…"
         />
       </section>
 
       <section className={styles.length}>
         <div className={styles.lengthHead}>
           <span className={styles.lengthLabel}>CV length</span>
-          <span className={styles.lengthHint}>Hirable renders to exactly this many pages.</span>
+          <span className={styles.lengthHint}>Hireable renders to exactly this many pages.</span>
         </div>
         <div className={styles.lengthOptions} role="radiogroup" aria-label="CV length in pages">
           {PAGE_OPTIONS.map((option) => (
@@ -213,14 +204,7 @@ export const CvChatSetup = () => {
 
       <footer className={styles.actions}>
         <ul className={styles.checks}>
-          <li className={hasCv ? styles.checkOn : styles.checkOff}>
-            <span className={styles.checkBox}>{hasCv ? "✓" : ""}</span>
-            CV added
-          </li>
-          <li className={hasJob ? styles.checkOn : styles.checkOff}>
-            <span className={styles.checkBox}>{hasJob ? "✓" : ""}</span>
-            Job description added
-          </li>
+
         </ul>
         <div className={styles.startGroup}>
           {sessionsRemaining !== null ? (
@@ -231,16 +215,8 @@ export const CvChatSetup = () => {
             </p>
           ) : null}
           <div className={styles.startButtons}>
-            <button
-              type="button"
-              className={styles.startSecondary}
-              onClick={() => start("cover_letter")}
-              disabled={!canStart}
-            >
-              {isLoading ? "Starting…" : "Generate a cover letter"}
-            </button>
             <button type="submit" className={styles.start} disabled={!canStart}>
-              {isLoading ? "Starting…" : "Start the chat →"}
+              {isLoading ? "Starting…" : "Create my CV →"}
             </button>
           </div>
         </div>
