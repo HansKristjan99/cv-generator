@@ -17,19 +17,17 @@ export function CvGeneratorPage() {
       <header className={styles.header}>
         <div>
           <div className={styles.breadcrumb}>
-            <span>Tailor</span>
-            <span className={styles.breadcrumbSep}>›</span>
-            <span className={styles.breadcrumbActive}>New draft</span>
+            <span className={styles.breadcrumbActive}>New CV</span>
           </div>
           <h1 className={styles.title}>Tailor your CV</h1>
           <p className={styles.subtitle}>
-            Chat with Hirable to refine your CV for a specific job.
+            Chat with Hireable to refine your CV for a specific job.
           </p>
         </div>
         <div className={styles.headerActions}>
           <span className={styles.status}>
             <span className={styles.statusDot} />
-            Hirable is ready
+            Hireable is ready
           </span>
         </div>
       </header>

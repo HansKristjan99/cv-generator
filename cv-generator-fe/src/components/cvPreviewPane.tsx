@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import type { PreviewKind } from "../types/chat";
 import { cx } from "../utils/cx";
@@ -16,15 +16,25 @@ type TabDescriptor = {
 type CvPreviewPaneProps = {
   descriptors: TabDescriptor[];
   selection: PreviewKind | null;
-  onSelect: (kind: PreviewKind) => void;
+  onSelect: (kind: PreviewKind | null) => void;
+  onEdit?: (kind: "generated_cv" | "cover_letter") => void;
+  chatContent: ReactNode;
+  composer: ReactNode;
 };
 
-export const CvPreviewPane = ({ descriptors, selection, onSelect }: CvPreviewPaneProps) => {
+export const CvPreviewPane = ({
+  descriptors,
+  selection,
+  onSelect,
+  onEdit,
+  chatContent,
+  composer,
+}: CvPreviewPaneProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const active = descriptors.find((d) => d.kind === selection && d.content)
-    ?? descriptors.find((d) => d.content)
-    ?? null;
+  const selected = selection ? descriptors.find((d) => d.kind === selection) ?? null : null;
+  const active = selected?.content ? selected : null;
+  const isChatActive = !active;
 
   const dataUrl =
     active?.mode === "pdf" && active.content
@@ -44,6 +54,14 @@ export const CvPreviewPane = ({ descriptors, selection, onSelect }: CvPreviewPan
     <aside className={cx(styles.pane, isFullscreen && styles.fullscreen)}>
       <div className={styles.header}>
         <div className={styles.tabs}>
+          <button
+            type="button"
+            className={cx(styles.tab, isChatActive && styles.tabActive)}
+            onClick={() => onSelect(null)}
+            title="View chat"
+          >
+            Chat
+          </button>
           {descriptors.map((d) => (
             <button
               key={d.kind}
@@ -58,6 +76,24 @@ export const CvPreviewPane = ({ descriptors, selection, onSelect }: CvPreviewPan
           ))}
         </div>
         <div className={styles.controls}>
+          {active?.mode === "pdf" && dataUrl ? (
+            <a className={styles.download} href={dataUrl} download={active.downloadName ?? "document.pdf"}>
+              ↓ Download
+            </a>
+          ) : null}
+          {active &&
+            onEdit &&
+            (active.kind === "generated_cv" || active.kind === "cover_letter") &&
+            active.mode === "pdf" && (
+              <button
+                type="button"
+                className={styles.editBtn}
+                onClick={() => onEdit(active.kind as "generated_cv" | "cover_letter")}
+                title="Edit fields manually"
+              >
+                ✎ Edit
+              </button>
+            )}
           {active && (
             <button
               type="button"
@@ -72,33 +108,32 @@ export const CvPreviewPane = ({ descriptors, selection, onSelect }: CvPreviewPan
         </div>
       </div>
 
-      {active ? (
-        <>
-          {active.mode === "pdf" && dataUrl ? (
-            <iframe className={styles.frame} src={dataUrl} title={active.label} />
-          ) : (
-            <div className={styles.textBody}>
-              {active.content?.trim() ? (
-                <pre className={styles.text}>{active.content}</pre>
-              ) : (
-                <p className={styles.empty}>Nothing to show here.</p>
-              )}
-            </div>
-          )}
-
-          {active.mode === "pdf" && dataUrl ? (
-            <div className={styles.footer}>
-              <a className={styles.download} href={dataUrl} download={active.downloadName ?? "document.pdf"}>
-                ↓ Download PDF
-              </a>
-            </div>
-          ) : null}
-        </>
-      ) : (
-        <div className={styles.textBody}>
-          <p className={styles.empty}>Nothing to preview yet.</p>
-        </div>
-      )}
+      <div className={styles.body}>
+        {isChatActive ? (
+          <div className={styles.chatView}>{chatContent}</div>
+        ) : active ? (
+          <>
+            {active.mode === "pdf" && dataUrl ? (
+              <iframe className={styles.frame} src={dataUrl} title={active.label} />
+            ) : (
+              <div className={styles.textBody}>
+                {active.content?.trim() ? (
+                  <pre className={styles.text}>{active.content}</pre>
+                ) : (
+                  <p className={styles.empty}>Nothing to show here.</p>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className={styles.textBody}>
+            <p className={styles.empty}>Nothing to preview yet.</p>
+          </div>
+        )}
+      </div>
+      <div className={styles.composerSlot}>
+        {composer}
+      </div>
     </aside>
   );
 };

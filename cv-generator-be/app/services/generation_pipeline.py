@@ -90,6 +90,7 @@ def _run_writer(
             "type": "cv",
             "content": latex,
             "pdf_base64": pdf_b64,
+            "structured_data": content.model_dump(),
         },
     ), content
 
@@ -132,6 +133,7 @@ def _run_cover_letter(
             "type": "cover_letter",
             "content": latex,
             "pdf_base64": pdf_b64,
+            "structured_data": content.model_dump(),
         },
     )
 

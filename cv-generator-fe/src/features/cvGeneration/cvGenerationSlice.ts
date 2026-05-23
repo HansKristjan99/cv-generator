@@ -12,6 +12,7 @@ import {
   type SessionStatus,
   type SessionSummary,
 } from "../../types/chat";
+import type { ClStructuredData, CvStructuredData } from "../../types/cv";
 
 type Status = "idle" | "loading" | "succeeded" | "failed";
 
@@ -23,12 +24,15 @@ type CvGenerationState = {
   generationStatus: Status;
   historyStatus: Status;
   enhanceStatus: Status;
+  manualEditStatus: Status;
   error: string | null;
   jobDescription: string | null;
   sourceCvText: string | null;
   sourceCvPdfBase64: string | null;
   latestCvPdfBase64: string | null;
   latestCoverLetterPdfBase64: string | null;
+  latestCvStructured: CvStructuredData | null;
+  latestClStructured: ClStructuredData | null;
   previewSelection: PreviewKind | null;
   monthlySessionsUsed: number | null;
   monthlyInventsUsed: number | null;
@@ -44,12 +48,15 @@ const initialState: CvGenerationState = {
   generationStatus: "idle",
   historyStatus: "idle",
   enhanceStatus: "idle",
+  manualEditStatus: "idle",
   error: null,
   jobDescription: null,
   sourceCvText: null,
   sourceCvPdfBase64: null,
   latestCvPdfBase64: null,
   latestCoverLetterPdfBase64: null,
+  latestCvStructured: null,
+  latestClStructured: null,
   previewSelection: null,
   monthlySessionsUsed: null,
   monthlyInventsUsed: null,
@@ -63,6 +70,8 @@ const PREVIEW_RESET = {
   sourceCvPdfBase64: null,
   latestCvPdfBase64: null,
   latestCoverLetterPdfBase64: null,
+  latestCvStructured: null,
+  latestClStructured: null,
   previewSelection: null,
 } as const;
 
@@ -130,6 +139,26 @@ export const enhanceAnswers = createAsyncThunk<
     return invented_answers;
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Unable to enhance answers");
+  }
+});
+
+type ManualEditInput = {
+  kind: "cv" | "cover_letter";
+  data: CvStructuredData | ClStructuredData;
+};
+
+export const saveManualEdit = createAsyncThunk<
+  { kind: "cv" | "cover_letter"; pdf_base64: string; data: CvStructuredData | ClStructuredData },
+  ManualEditInput,
+  { extra: ApiClient; state: RootState; rejectValue: string }
+>("cvGeneration/saveManualEdit", async ({ kind, data }, { extra, getState, rejectWithValue }) => {
+  const { activeSessionId } = getState().cvGeneration;
+  if (!activeSessionId) return rejectWithValue("No active session.");
+  try {
+    const { pdf_base64 } = await extra.manualEditCv(activeSessionId, kind, data);
+    return { kind, pdf_base64, data };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to save edits.");
   }
 });
 
@@ -207,6 +236,8 @@ const cvGenerationSlice = createSlice({
         state.sourceCvPdfBase64 = action.payload.source_cv_pdf_base64;
         state.latestCvPdfBase64 = action.payload.latest_cv_pdf_base64;
         state.latestCoverLetterPdfBase64 = action.payload.latest_cover_letter_pdf_base64;
+        state.latestCvStructured = action.payload.latest_cv_structured ?? null;
+        state.latestClStructured = action.payload.latest_cover_letter_structured ?? null;
         state.generationStatus = toGenerationStatus(action.payload.status);
         state.error =
           action.payload.status === "failed"
@@ -260,6 +291,24 @@ const cvGenerationSlice = createSlice({
       .addCase(enhanceAnswers.rejected, (state, action) => {
         state.enhanceStatus = "failed";
         state.error = action.payload ?? action.error.message ?? "Unable to enhance answers";
+      })
+      .addCase(saveManualEdit.pending, (state) => {
+        state.manualEditStatus = "loading";
+        state.error = null;
+      })
+      .addCase(saveManualEdit.fulfilled, (state, action) => {
+        state.manualEditStatus = "idle";
+        if (action.payload.kind === "cv") {
+          state.latestCvPdfBase64 = action.payload.pdf_base64;
+          state.latestCvStructured = action.payload.data as CvStructuredData;
+        } else {
+          state.latestCoverLetterPdfBase64 = action.payload.pdf_base64;
+          state.latestClStructured = action.payload.data as ClStructuredData;
+        }
+      })
+      .addCase(saveManualEdit.rejected, (state, action) => {
+        state.manualEditStatus = "failed";
+        state.error = action.payload ?? action.error.message ?? "Failed to save edits.";
       });
   },
 });

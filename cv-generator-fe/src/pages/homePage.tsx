@@ -20,9 +20,9 @@ export function HomePage() {
       <section className={styles.panel}>
         <div className={styles.brand}>
           <div className={styles.brandTile}>H</div>
-          <p className={styles.brandName}>Hirable</p>
+          <p className={styles.brandName}>Hireable</p>
         </div>
-        <h1 className={styles.title}>Your opinionated CV editor.</h1>
+        <h1 className={styles.title}>Fine tune your CV.</h1>
         <p className={styles.message}>
           Sign in to tailor a CV from your current resume and a job description.
         </p>
