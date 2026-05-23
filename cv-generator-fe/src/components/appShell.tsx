@@ -14,7 +14,7 @@ import styles from "./appShell.module.css";
 type AppTab = "cv" | "templates" | "user memory" | "session";
 
 const tabs: Array<{ id: AppTab; label: string; detail: string }> = [
-  { id: "cv", label: "Tailor", detail: "Generator" },
+  { id: "cv", label: "New CV", detail: "Generator" },
   { id: "templates", label: "Templates", detail: "CV layouts" },
   { id: "user memory", label: "Memory", detail: "Profile data" },
 ];
@@ -145,7 +145,7 @@ function renderTab(activeTab: AppTab, isLoaded: boolean, isSignedIn: boolean | u
   }
 
   return (
-    <AuthenticatedTab title="Tailor" isLoaded={isLoaded} isSignedIn={isSignedIn}>
+    <AuthenticatedTab title="New CV" isLoaded={isLoaded} isSignedIn={isSignedIn}>
       <CvGeneratorPage />
     </AuthenticatedTab>
   );

@@ -19,29 +19,54 @@
 
 .header {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
-  gap: 12px;
-  padding: 14px 22px;
+  gap: 8px;
+  padding: 0 12px 0 0;
   border-bottom: 1px solid var(--color-rule-soft);
+  min-height: 46px;
 }
 
-.heading {
+.tabs {
   display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.tab {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  padding: 0 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-muted-deep);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+  cursor: pointer;
 }
 
-.title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 500;
+.tab:hover:not(:disabled) {
   color: var(--color-ink);
+  background: var(--color-bg-alt);
 }
 
-.badge {
-  composes: pillSky from "../primitives/primitives.module.css";
+.tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tabActive {
+  color: var(--color-primary-deep);
+  border-bottom-color: var(--color-primary);
+  background: transparent;
 }
 
 .controls {
