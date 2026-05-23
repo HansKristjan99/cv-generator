@@ -1,6 +1,7 @@
 """`/cv/generate/` route — queue a generation job. Orchestration lives in services.generation_pipeline."""
 
 import base64
+import json
 import logging
 import uuid
 from datetime import datetime
@@ -187,8 +188,28 @@ async def generate_cv(
 
         # `kind` stays as the per-turn value from the form, so a CV session can
         # produce a cover letter (and vice versa) on a follow-up turn.
-        prompt_input = user_message
         openai_conversation_id = cv_session.conversation_id
+
+        # Inject the latest structured document so manual edits are visible to the agent.
+        latest_msgs = db.scalars(
+            select(Message)
+            .where(Message.cv_session_id == cv_session.id, Message.role == "assistant")
+            .order_by(Message.created_at.desc())
+        ).all()
+        latest_structured: dict | None = None
+        for m in latest_msgs:
+            if m.content.get("type") in ("cv", "cover_letter") and m.content.get("structured_data"):
+                latest_structured = m.content["structured_data"]
+                break
+
+        if latest_structured:
+            prompt_input = (
+                f"[Current document — use this as the base for any updates]\n"
+                f"{json.dumps(latest_structured, indent=2)}\n\n"
+                f"[User request]\n{user_message}"
+            )
+        else:
+            prompt_input = user_message
         user_message_text = user_message
         job_description = cv_session.job_description
         page_count = cv_session.page_count

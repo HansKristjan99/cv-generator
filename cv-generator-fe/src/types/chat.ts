@@ -60,4 +60,6 @@ export type LoadConversationResponse = {
   source_cv_pdf_base64: string | null;
   latest_cv_pdf_base64: string | null;
   latest_cover_letter_pdf_base64: string | null;
+  latest_cv_structured: import("./cv").CvStructuredData | null;
+  latest_cover_letter_structured: import("./cv").ClStructuredData | null;
 };

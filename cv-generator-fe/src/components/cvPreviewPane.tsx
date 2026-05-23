@@ -17,9 +17,10 @@ type CvPreviewPaneProps = {
   descriptors: TabDescriptor[];
   selection: PreviewKind | null;
   onSelect: (kind: PreviewKind) => void;
+  onEdit?: (kind: "generated_cv" | "cover_letter") => void;
 };
 
-export const CvPreviewPane = ({ descriptors, selection, onSelect }: CvPreviewPaneProps) => {
+export const CvPreviewPane = ({ descriptors, selection, onSelect, onEdit }: CvPreviewPaneProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const active = descriptors.find((d) => d.kind === selection && d.content)
@@ -58,6 +59,19 @@ export const CvPreviewPane = ({ descriptors, selection, onSelect }: CvPreviewPan
           ))}
         </div>
         <div className={styles.controls}>
+          {active &&
+            onEdit &&
+            (active.kind === "generated_cv" || active.kind === "cover_letter") &&
+            active.mode === "pdf" && (
+              <button
+                type="button"
+                className={styles.editBtn}
+                onClick={() => onEdit(active.kind as "generated_cv" | "cover_letter")}
+                title="Edit fields manually"
+              >
+                Edit
+              </button>
+            )}
           {active && (
             <button
               type="button"

@@ -79,6 +79,8 @@ class LoadConversationResponse(BaseModel):
     source_cv_pdf_base64: str | None
     latest_cv_pdf_base64: str | None
     latest_cover_letter_pdf_base64: str | None
+    latest_cv_structured: dict | None
+    latest_cover_letter_structured: dict | None
 
 
 @router.get("/sessions/{session_id}/messages", response_model=LoadConversationResponse)
@@ -101,15 +103,28 @@ def get_session_messages(
 
     latest_cv_pdf_base64: str | None = None
     latest_cover_letter_pdf_base64: str | None = None
+    latest_cv_structured: dict | None = None
+    latest_cover_letter_structured: dict | None = None
     for m in reversed(msgs):
         if m.role != "assistant":
             continue
         m_type = m.content.get("type")
-        if m_type == "cv" and latest_cv_pdf_base64 is None:
-            latest_cv_pdf_base64 = m.content.get("pdf_base64") or None
-        elif m_type == "cover_letter" and latest_cover_letter_pdf_base64 is None:
-            latest_cover_letter_pdf_base64 = m.content.get("pdf_base64") or None
-        if latest_cv_pdf_base64 is not None and latest_cover_letter_pdf_base64 is not None:
+        if m_type == "cv":
+            if latest_cv_pdf_base64 is None:
+                latest_cv_pdf_base64 = m.content.get("pdf_base64") or None
+            if latest_cv_structured is None:
+                latest_cv_structured = m.content.get("structured_data") or None
+        elif m_type == "cover_letter":
+            if latest_cover_letter_pdf_base64 is None:
+                latest_cover_letter_pdf_base64 = m.content.get("pdf_base64") or None
+            if latest_cover_letter_structured is None:
+                latest_cover_letter_structured = m.content.get("structured_data") or None
+        if (
+            latest_cv_pdf_base64 is not None
+            and latest_cover_letter_pdf_base64 is not None
+            and latest_cv_structured is not None
+            and latest_cover_letter_structured is not None
+        ):
             break
 
     messages = [
@@ -133,6 +148,8 @@ def get_session_messages(
         source_cv_pdf_base64=cv_session.source_cv_pdf_base64,
         latest_cv_pdf_base64=latest_cv_pdf_base64,
         latest_cover_letter_pdf_base64=latest_cover_letter_pdf_base64,
+        latest_cv_structured=latest_cv_structured,
+        latest_cover_letter_structured=latest_cover_letter_structured,
     )
 
 

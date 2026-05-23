@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { CvChatHeader } from "../components/cvChatHeader";
 import { CvChatMessageComposer } from "../components/cvChatMessageComposer";
 import { CvChatMessageList } from "../components/cvMessageList";
 import { CvPreviewPane } from "../components/cvPreviewPane";
+import { ManualEditModal } from "../components/manualEditModal";
 import {
   selectActiveConversation,
   setPreviewSelection,
@@ -23,10 +25,12 @@ type PreviewDescriptor = {
 export function ConversationPage() {
   const dispatch = useAppDispatch();
   const conv = useAppSelector(selectActiveConversation);
-  const { chatSessions, activeSessionId } = useAppSelector((s) => s.cvGeneration);
+  const { chatSessions, activeSessionId, latestCvStructured, latestClStructured } =
+    useAppSelector((s) => s.cvGeneration);
   const activeSession = chatSessions.find((s) => s.id === activeSessionId);
   const title = activeSession?.title ?? "Conversation";
   const previewSelection = conv?.previewSelection ?? null;
+  const [editingKind, setEditingKind] = useState<"generated_cv" | "cover_letter" | null>(null);
 
   const sourceCvPdf = conv?.sourceCvPdfBase64 ?? null;
   const sourceCvText = conv?.sourceCvText ?? null;
@@ -88,8 +92,24 @@ export function ConversationPage() {
           descriptors={descriptors}
           selection={previewSelection}
           onSelect={(kind: PreviewKind) => dispatch(setPreviewSelection(kind))}
+          onEdit={(kind) => setEditingKind(kind)}
         />
       </section>
+
+      {editingKind === "generated_cv" && latestCvStructured && (
+        <ManualEditModal
+          kind="cv"
+          initialData={latestCvStructured}
+          onClose={() => setEditingKind(null)}
+        />
+      )}
+      {editingKind === "cover_letter" && latestClStructured && (
+        <ManualEditModal
+          kind="cover_letter"
+          initialData={latestClStructured}
+          onClose={() => setEditingKind(null)}
+        />
+      )}
     </section>
   );
 }
