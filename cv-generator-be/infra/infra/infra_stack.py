@@ -47,6 +47,19 @@ class CvGeneratorBeStack(Stack):
         )
         rds_sg.add_ingress_rule(ecs_sg, ec2.Port.tcp(5432))
 
+        cloudshell_sg = ec2.SecurityGroup(
+            self,
+            "CloudShellSg",
+            vpc=vpc,
+            description="CloudShell access to RDS for manual queries",
+        )
+
+        rds_sg.add_ingress_rule(
+            cloudshell_sg,
+            ec2.Port.tcp(5432),
+            "Allow CloudShell to connect to PostgreSQL",
+        )
+
         # RDS PostgreSQL 16 — credentials are auto-generated in Secrets Manager
         db = rds.DatabaseInstance(
             self,
@@ -70,6 +83,15 @@ class CvGeneratorBeStack(Stack):
             backup_retention=Duration.days(0),
             multi_az=False,
         )
+
+        CfnOutput(
+            self,
+            "CloudShellSecurityGroupId",
+            value=cloudshell_sg.security_group_id,
+        )
+
+       
+
         assert db.secret is not None, "RDS secret must exist when using from_generated_secret"
 
         # Placeholder secrets for external service keys.
