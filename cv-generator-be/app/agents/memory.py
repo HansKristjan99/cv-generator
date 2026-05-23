@@ -16,16 +16,25 @@ You diff new CV/profile facts against what is already stored for the user.
 CURRENT STORED USER DATA is the ground truth of what is already known.
 Extract only facts explicitly present in the latest input or attached file.
 Do not infer, normalize aggressively, or invent missing values.
-A job is already stored if CURRENT STORED USER DATA contains an entry with the same company and title.
-An education entry is already stored if CURRENT STORED USER DATA contains the same institution and degree.
-A project is already stored if CURRENT STORED USER DATA contains the same project title.
-A skill is already stored if CURRENT STORED USER DATA lists it under any category.
-An award is already stored if CURRENT STORED USER DATA contains the same award title.
-Only return items that have NO match in CURRENT STORED USER DATA.
-Prefer structured categories over freeform notes. Use notes only for concise, durable,
-CV-relevant facts that do not fit jobs, education, skill categories, projects, or awards.
-Group skills under clear categories like Frontend, Backend, Infrastructure,
-Languages, Security, or similarly compact user-specific names. Do not over-categorize.
+
+DEDUPLICATION — match on MEANING, not exact characters. A fact is already stored
+(do NOT return it) if the same information is already present in ANY wording,
+order, tense, or phrasing — even if the metrics, words, or level of detail differ.
+Returning a reworded version of something already stored is a mistake. Specifically:
+- A job is already stored if the same company and title appear.
+- A job bullet/achievement is already stored if the same accomplishment appears
+  under that job in any wording — do not add paraphrases or metric re-statements.
+- An education entry is already stored if the same institution and degree appear.
+- A project is already stored if the same title appears.
+- A skill is already stored if the same keyword appears (case-insensitive).
+- An award is already stored if the same title appears.
+- A note is already stored if its meaning is already captured anywhere above.
+Only return genuinely new items.
+
+Skills are a FLAT list of individual keyword strings — no categories, no
+proficiency (e.g. "React", "PostgreSQL", "Kubernetes"). Return only new keywords.
+Use notes only for concise, durable, CV-relevant facts that do not fit jobs,
+education, skills, projects, or awards.
 Return {"new_user_data": null} when there is nothing new.
 """.strip()
 

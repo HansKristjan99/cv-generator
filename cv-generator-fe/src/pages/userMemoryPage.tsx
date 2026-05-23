@@ -9,7 +9,6 @@ import type {
   MemoryNote,
   Project,
   Skill,
-  SkillCategory,
   UserMemory,
   UserMemoryPatch,
 } from "../api/user-memory/userMemory";
@@ -20,10 +19,10 @@ type MemoryKind =
   | "job_experiences"
   | "education_experiences"
   | "projects"
-  | "skill_categories"
+  | "skills"
   | "awards"
   | "notes";
-type SimpleKind = Exclude<MemoryKind, "job_experiences" | "skill_categories">;
+type SimpleKind = Exclude<MemoryKind, "job_experiences" | "skills">;
 type SimpleItem = EducationExperience | Project | Award | MemoryNote;
 
 type FieldConfig = {
@@ -62,22 +61,10 @@ type JobDraft = {
   bullets: BulletDraft[];
 };
 
-type SkillDraft = {
-  id: string;
-  name: string;
-  proficiency: string;
-};
-
-type SkillCategoryDraft = {
-  id: string;
-  name: string;
-  skills: SkillDraft[];
-};
-
 type Editor = {
   kind: MemoryKind;
   id: string;
-  draft: Record<string, string> | JobDraft | SkillCategoryDraft;
+  draft: Record<string, string> | JobDraft;
   removedChildIds: string[];
 };
 
@@ -191,8 +178,7 @@ export function UserMemoryPage() {
       memory.job_experiences.length +
       memory.education_experiences.length +
       memory.projects.length +
-      memory.skill_categories.length +
-      memory.skill_categories.reduce((count, category) => count + category.skills.length, 0) +
+      memory.skills.length +
       memory.awards.length +
       memory.notes.length
     );
@@ -223,6 +209,19 @@ export function UserMemoryPage() {
       setEditor(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to remove memory");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addSkill = async (name: string) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const next = await apiClient.updateUserMemory({ skills: [{ name }] });
+      setMemory(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save memory");
     } finally {
       setSaving(false);
     }
@@ -271,14 +270,12 @@ export function UserMemoryPage() {
         {simpleSections.slice(0, 2).map((section) =>
           renderSimpleSection(memory, section, editor, setEditor, saveEditor, removeItem, saving),
         )}
-        {renderSkillCategorySection(
-          memory.skill_categories,
-          editor,
-          setEditor,
-          saveEditor,
-          removeItem,
-          saving,
-        )}
+        <SkillCloudSection
+          skills={memory.skills}
+          saving={saving}
+          onAdd={addSkill}
+          onDelete={(id) => removeItem("skills", id)}
+        />
         {simpleSections.slice(2).map((section) =>
           renderSimpleSection(memory, section, editor, setEditor, saveEditor, removeItem, saving),
         )}
@@ -343,63 +340,68 @@ function renderJobSection(
   );
 }
 
-function renderSkillCategorySection(
-  categories: SkillCategory[],
-  editor: Editor | null,
-  setEditor: (editor: Editor | null) => void,
-  saveEditor: () => void,
-  removeItem: (kind: MemoryKind, id: string) => void,
-  saving: boolean,
-) {
-  const isAdding = editor?.kind === "skill_categories" && editor.id === NEW_ID;
+function SkillCloudSection({
+  skills,
+  saving,
+  onAdd,
+  onDelete,
+}: {
+  skills: Skill[];
+  saving: boolean;
+  onAdd: (name: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [value, setValue] = useState("");
+  const existing = new Set(skills.map((skill) => skill.name.toLowerCase()));
+  const trimmed = value.trim();
+  const canAdd = Boolean(trimmed) && !existing.has(trimmed.toLowerCase()) && !saving;
+
+  const add = () => {
+    if (!canAdd) return;
+    onAdd(trimmed);
+    setValue("");
+  };
+
   return (
     <section className={styles.section}>
-      <SectionHeader
-        title="Skill Categories"
-        eyebrow="Grouped tools and strengths"
-        count={categories.length}
-        addLabel="Add category"
-        onAdd={() =>
-          setEditor({
-            kind: "skill_categories",
-            id: NEW_ID,
-            draft: blankSkillCategory(),
-            removedChildIds: [],
-          })
-        }
-      />
-      <div className={styles.itemList}>
-        {isAdding ? renderSkillCategoryEditor(editor, setEditor, saveEditor, removeItem, saving) : null}
-        {categories.length === 0 && !isAdding ? (
-          <p className={styles.empty}>No skill categories saved yet.</p>
-        ) : null}
-        {categories.map((category) => {
-          const isOpen = editor?.kind === "skill_categories" && editor.id === category.id;
-          if (isOpen) {
-            return renderSkillCategoryEditor(editor, setEditor, saveEditor, removeItem, saving);
-          }
-          return (
-            <CollapsedCard
-              key={category.id}
-              title={category.name}
-              meta={
-                category.skills.length
-                  ? category.skills.map((skill) => skill.name).join(", ")
-                  : "No skills yet"
-              }
-              saving={saving}
-              onOpen={() =>
-                setEditor({
-                  kind: "skill_categories",
-                  id: category.id,
-                  draft: skillCategoryToDraft(category),
-                  removedChildIds: [],
-                })
-              }
-              onDelete={() => removeItem("skill_categories", category.id)}
-            />
-          );
-        })}
+      <SectionHeader title="Skills" eyebrow="Keyword cloud" count={skills.length} />
+      {skills.length === 0 ? (
+        <p className={styles.empty}>No skills saved yet.</p>
+      ) : (
+        <div className={styles.skillCloud}>
+          {skills.map((skill) => (
+            <span className={styles.skillChip} key={skill.id}>
+              {skill.name}
+              <button
+                type="button"
+                className={styles.skillChipRemove}
+                onClick={() => onDelete(skill.id)}
+                disabled={saving}
+                aria-label={`Remove ${skill.name}`}
+                title="Remove"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className={styles.skillAddRow}>
+        <input
+          className={styles.input}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              add();
+            }
+          }}
+          placeholder="Add a skill and press Enter"
+        />
+        <button type="button" className={styles.addButton} onClick={add} disabled={!canAdd}>
+          Add skill
+        </button>
       </div>
     </section>
   );
@@ -460,97 +462,6 @@ function renderSimpleSection(
         })}
       </div>
     </section>
-  );
-}
-
-function renderSkillCategoryEditor(
-  editor: Editor,
-  setEditor: (editor: Editor | null) => void,
-  saveEditor: () => void,
-  removeItem: (kind: MemoryKind, id: string) => void,
-  saving: boolean,
-) {
-  const draft = editor.draft as SkillCategoryDraft;
-  const setDraft = (next: SkillCategoryDraft) => setEditor({ ...editor, draft: next });
-  return (
-    <article className={cx(styles.itemCard, styles.itemCardOpen)} key={`skill-category:${editor.id}`}>
-      <div className={styles.editorHead}>
-        <div>
-          <p className={styles.editorEyebrow}>{editor.id === NEW_ID ? "New" : "Editing"}</p>
-          <h3 className={styles.editorTitle}>Skill Category</h3>
-        </div>
-      </div>
-
-      <div className={styles.fieldGrid}>
-        <Field
-          field={{ name: "name", label: "Category name", required: true }}
-          value={draft.name}
-          onChange={(value) => setDraft({ ...draft, name: value })}
-        />
-      </div>
-
-      <div className={styles.bullets}>
-        <div className={styles.bulletsHead}>
-          <span>Skills</span>
-          <button
-            type="button"
-            className={styles.inlineButton}
-            onClick={() =>
-              setDraft({
-                ...draft,
-                skills: [...draft.skills, { id: "", name: "", proficiency: "" }],
-              })
-            }
-          >
-            Add skill
-          </button>
-        </div>
-        {draft.skills.length === 0 ? <p className={styles.emptySmall}>No skills yet.</p> : null}
-        {draft.skills.map((skill, index) => (
-          <div className={styles.skillEditor} key={`${skill.id || "new"}:${index}`}>
-            <input
-              className={styles.input}
-              value={skill.name}
-              onChange={(event) => updateSkill(draft, setDraft, index, "name", event.target.value)}
-              placeholder="Skill"
-            />
-            <input
-              className={styles.input}
-              value={skill.proficiency}
-              onChange={(event) => updateSkill(draft, setDraft, index, "proficiency", event.target.value)}
-              placeholder="Context"
-            />
-            <button
-              type="button"
-              className={styles.inlineDanger}
-              onClick={() => {
-                setEditor({
-                  ...editor,
-                  draft: {
-                    ...draft,
-                    skills: draft.skills.filter((_, i) => i !== index),
-                  },
-                  removedChildIds: skill.id
-                    ? [...editor.removedChildIds, skill.id]
-                    : editor.removedChildIds,
-                });
-              }}
-            >
-              Remove skill
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <EditorActions
-        canSave={canSave(editor)}
-        saving={saving}
-        canRemove={editor.id !== NEW_ID}
-        onSave={saveEditor}
-        onCancel={() => setEditor(null)}
-        onRemove={() => removeItem("skill_categories", editor.id)}
-      />
-    </article>
   );
 }
 
@@ -713,8 +624,8 @@ function SectionHeader({
   title: string;
   eyebrow: string;
   count: number;
-  addLabel: string;
-  onAdd: () => void;
+  addLabel?: string;
+  onAdd?: () => void;
 }) {
   return (
     <header className={styles.sectionHeader}>
@@ -724,9 +635,11 @@ function SectionHeader({
       </div>
       <div className={styles.sectionActions}>
         <span className={styles.count}>{count}</span>
-        <button type="button" className={styles.addButton} onClick={onAdd}>
-          {addLabel}
-        </button>
+        {onAdd && addLabel ? (
+          <button type="button" className={styles.addButton} onClick={onAdd}>
+            {addLabel}
+          </button>
+        ) : null}
       </div>
     </header>
   );
@@ -864,22 +777,6 @@ function bulletToDraft(bullet: JobExperienceBullet): BulletDraft {
   };
 }
 
-function skillCategoryToDraft(category: SkillCategory): SkillCategoryDraft {
-  return {
-    id: category.id,
-    name: category.name,
-    skills: category.skills.map(skillToDraft),
-  };
-}
-
-function skillToDraft(skill: Skill): SkillDraft {
-  return {
-    id: skill.id,
-    name: skill.name,
-    proficiency: skill.proficiency ?? "",
-  };
-}
-
 function blankJob(): JobDraft {
   return {
     id: "",
@@ -889,14 +786,6 @@ function blankJob(): JobDraft {
     end_date: "",
     location: "",
     bullets: [],
-  };
-}
-
-function blankSkillCategory(): SkillCategoryDraft {
-  return {
-    id: "",
-    name: "",
-    skills: [],
   };
 }
 
@@ -925,19 +814,6 @@ function updateBullet(
   });
 }
 
-function updateSkill(
-  draft: SkillCategoryDraft,
-  setDraft: (draft: SkillCategoryDraft) => void,
-  index: number,
-  field: keyof Omit<SkillDraft, "id">,
-  value: string,
-) {
-  setDraft({
-    ...draft,
-    skills: draft.skills.map((skill, i) => (i === index ? { ...skill, [field]: value } : skill)),
-  });
-}
-
 function canSave(editor: Editor): boolean {
   if (editor.kind === "job_experiences") {
     const draft = editor.draft as JobDraft;
@@ -946,11 +822,6 @@ function canSave(editor: Editor): boolean {
       Boolean(draft.job_title.trim()) &&
       draft.bullets.every((bullet) => Boolean(bullet.bullet_points.trim()))
     );
-  }
-
-  if (editor.kind === "skill_categories") {
-    const draft = editor.draft as SkillCategoryDraft;
-    return Boolean(draft.name.trim()) && draft.skills.every((skill) => Boolean(skill.name.trim()));
   }
 
   const section = simpleSections.find((item) => item.kind === editor.kind);
@@ -979,26 +850,6 @@ function buildPatch(editor: Editor): UserMemoryPatch {
               id: bullet.id || null,
               bullet_points: bullet.bullet_points.trim(),
               relevant_technologies: nullable(bullet.relevant_technologies),
-            })),
-            ...editor.removedChildIds.map((id) => ({ id, delete: true })),
-          ],
-        },
-      ],
-    };
-  }
-
-  if (editor.kind === "skill_categories") {
-    const draft = editor.draft as SkillCategoryDraft;
-    return {
-      skill_categories: [
-        {
-          id: draft.id || null,
-          name: draft.name.trim(),
-          skills: [
-            ...draft.skills.map((skill) => ({
-              id: skill.id || null,
-              name: skill.name.trim(),
-              proficiency: nullable(skill.proficiency),
             })),
             ...editor.removedChildIds.map((id) => ({ id, delete: true })),
           ],

@@ -18,7 +18,6 @@ from app.models import (
     MemoryNote,
     Project,
     Skill,
-    SkillCategory,
     User,
 )
 from app.services.openai_client import OpenAIClient
@@ -36,17 +35,13 @@ def format_user_data(db: Session, user_id: UUID) -> str:
     bullets = list(db.scalars(select(JobExperienceBullet).where(JobExperienceBullet.user_id == user_id)))
     education = list(db.scalars(select(EducationExperience).where(EducationExperience.user_id == user_id)))
     projects = list(db.scalars(select(Project).where(Project.user_id == user_id)))
-    skill_categories = list(db.scalars(select(SkillCategory).where(SkillCategory.user_id == user_id)))
-    skills = list(db.scalars(select(Skill).where(Skill.user_id == user_id)))
+    skills = list(db.scalars(select(Skill.name).where(Skill.user_id == user_id)))
     awards = list(db.scalars(select(Award).where(Award.user_id == user_id)))
     notes = list(db.scalars(select(MemoryNote).where(MemoryNote.user_id == user_id)))
 
     by_job: dict[UUID, list[JobExperienceBullet]] = {}
     for bullet in bullets:
         by_job.setdefault(bullet.job_experience_id, []).append(bullet)
-    by_category: dict[UUID, list[Skill]] = {}
-    for skill in skills:
-        by_category.setdefault(skill.skill_category_id, []).append(skill)
 
     sections: list[str] = []
     if jobs:
@@ -65,13 +60,8 @@ def format_user_data(db: Session, user_id: UUID) -> str:
         sections.append("\n".join(["Projects:"] + [
             f"- {_line(p.title, p.description, p.link)}" for p in projects
         ]))
-    if skill_categories:
-        lines = ["Skills:"]
-        for category in skill_categories:
-            lines.append(f"- {category.name}")
-            for skill in by_category.get(category.id, []):
-                lines.append(f"  - {_line(skill.name, skill.proficiency)}")
-        sections.append("\n".join(lines))
+    if skills:
+        sections.append("Skills (flat keyword cloud; group as needed for the CV):\n" + ", ".join(skills))
     if awards:
         sections.append("\n".join(["Awards and Achievements:"] + [
             f"- {_line(a.title, a.issuer, a.date, a.description, a.link)}" for a in awards

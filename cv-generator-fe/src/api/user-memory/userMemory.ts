@@ -36,13 +36,6 @@ export type Project = {
 export type Skill = {
   id: string;
   name: string;
-  proficiency: string | null;
-};
-
-export type SkillCategory = {
-  id: string;
-  name: string;
-  skills: Skill[];
 };
 
 export type Award = {
@@ -63,7 +56,7 @@ export type UserMemory = {
   job_experiences: JobExperience[];
   education_experiences: EducationExperience[];
   projects: Project[];
-  skill_categories: SkillCategory[];
+  skills: Skill[];
   awards: Award[];
   notes: MemoryNote[];
 };
@@ -81,10 +74,6 @@ export type JobExperiencePatch = IdPatch &
 export type EducationExperiencePatch = IdPatch & Partial<Omit<EducationExperience, "id">>;
 export type ProjectPatch = IdPatch & Partial<Omit<Project, "id">>;
 export type SkillPatch = IdPatch & Partial<Omit<Skill, "id">>;
-export type SkillCategoryPatch = IdPatch &
-  Partial<Omit<SkillCategory, "id" | "skills">> & {
-    skills?: SkillPatch[];
-  };
 export type AwardPatch = IdPatch & Partial<Omit<Award, "id">>;
 export type MemoryNotePatch = IdPatch & Partial<Omit<MemoryNote, "id">>;
 
@@ -92,7 +81,7 @@ export type UserMemoryPatch = {
   job_experiences?: JobExperiencePatch[];
   education_experiences?: EducationExperiencePatch[];
   projects?: ProjectPatch[];
-  skill_categories?: SkillCategoryPatch[];
+  skills?: SkillPatch[];
   awards?: AwardPatch[];
   notes?: MemoryNotePatch[];
 };

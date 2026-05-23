@@ -42,7 +42,7 @@ def test_get_memory_empty(db_user: tuple[Session, User]) -> None:
         "job_experiences": [],
         "education_experiences": [],
         "projects": [],
-        "skill_categories": [],
+        "skills": [],
         "awards": [],
         "notes": [],
     }
@@ -72,12 +72,7 @@ def test_post_memory_creates_entities_with_empty_ids(db_user: tuple[Session, Use
                     {"degree": "BSc", "institution": "University", "field_of_study": "CS"}
                 ],
                 "projects": [{"title": "Portfolio", "description": "Personal site"}],
-                "skill_categories": [
-                    {
-                        "name": "Frontend",
-                        "skills": [{"name": "React", "proficiency": "Advanced"}],
-                    }
-                ],
+                "skills": [{"name": "React"}],
                 "awards": [{"title": "Olympiad finalist", "issuer": "Math Olympiad"}],
                 "notes": [{"content": "Prefers remote-first roles with async collaboration."}],
             }
@@ -91,8 +86,7 @@ def test_post_memory_creates_entities_with_empty_ids(db_user: tuple[Session, Use
     assert body["job_experiences"][0]["bullets"][0]["bullet_points"] == "Built the platform."
     assert body["education_experiences"][0]["degree"] == "BSc"
     assert body["projects"][0]["title"] == "Portfolio"
-    assert body["skill_categories"][0]["name"] == "Frontend"
-    assert body["skill_categories"][0]["skills"][0]["name"] == "React"
+    assert body["skills"][0]["name"] == "React"
     assert body["awards"][0]["title"] == "Olympiad finalist"
     assert body["notes"][0]["content"] == "Prefers remote-first roles with async collaboration."
 
@@ -167,7 +161,7 @@ def test_post_memory_returns_400_for_missing_required_create_field(
     db, user = db_user
 
     with pytest.raises(HTTPException) as exc:
-        update_user_memory(payload=_patch({"skill_categories": [{}]}), current_user=user, db=db)
+        update_user_memory(payload=_patch({"skills": [{}]}), current_user=user, db=db)
 
     assert exc.value.status_code == 400
 
@@ -265,69 +259,43 @@ def test_post_memory_rejects_long_note(db_user: tuple[Session, User]) -> None:
         )
 
 
-def test_post_memory_updates_and_deletes_skill_categories(db_user: tuple[Session, User]) -> None:
+def test_post_memory_updates_and_deletes_skills(db_user: tuple[Session, User]) -> None:
     db, user = db_user
     created = update_user_memory(
-        payload=_patch(
-            {
-                "skill_categories": [
-                    {
-                        "name": "Frontend",
-                        "skills": [{"name": "React", "proficiency": "Advanced"}],
-                    }
-                ]
-            }
-        ),
+        payload=_patch({"skills": [{"name": "React"}]}),
         current_user=user,
         db=db,
     ).model_dump(mode="json")
-    category = created["skill_categories"][0]
-    skill = category["skills"][0]
+    skill = created["skills"][0]
+    assert skill["name"] == "React"
 
     updated = update_user_memory(
-        payload=_patch(
-            {
-                "skill_categories": [
-                    {
-                        "id": category["id"],
-                        "name": "Client Apps",
-                        "skills": [{"id": skill["id"], "proficiency": "Expert"}],
-                    }
-                ]
-            }
-        ),
+        payload=_patch({"skills": [{"id": skill["id"], "name": "React 19"}]}),
         current_user=user,
         db=db,
     ).model_dump(mode="json")
 
-    assert updated["skill_categories"][0]["name"] == "Client Apps"
-    assert updated["skill_categories"][0]["skills"][0]["name"] == "React"
-    assert updated["skill_categories"][0]["skills"][0]["proficiency"] == "Expert"
+    assert updated["skills"][0]["name"] == "React 19"
 
-    deleted_skill = update_user_memory(
-        payload=_patch(
-            {
-                "skill_categories": [
-                    {
-                        "id": category["id"],
-                        "skills": [{"id": skill["id"], "delete": True}],
-                    }
-                ]
-            }
-        ),
+    deleted = update_user_memory(
+        payload=_patch({"skills": [{"id": skill["id"], "delete": True}]}),
         current_user=user,
         db=db,
     ).model_dump(mode="json")
 
-    assert deleted_skill["skill_categories"][0]["skills"] == []
+    assert deleted["skills"] == []
 
-    deleted_category = update_user_memory(
-        payload=_patch({"skill_categories": [{"id": category["id"], "delete": True}]}),
+
+def test_post_memory_skills_deduplicate_case_insensitively(db_user: tuple[Session, User]) -> None:
+    db, user = db_user
+    update_user_memory(payload=_patch({"skills": [{"name": "React"}]}), current_user=user, db=db)
+    result = update_user_memory(
+        payload=_patch({"skills": [{"name": "react"}]}),
         current_user=user,
         db=db,
     ).model_dump(mode="json")
 
-    assert deleted_category["skill_categories"] == []
+    assert [skill["name"] for skill in result["skills"]] == ["React"]
 
 
 def test_post_memory_returns_400_for_missing_skill_name(db_user: tuple[Session, User]) -> None:
@@ -335,7 +303,7 @@ def test_post_memory_returns_400_for_missing_skill_name(db_user: tuple[Session, 
 
     with pytest.raises(HTTPException) as exc:
         update_user_memory(
-            payload=_patch({"skill_categories": [{"name": "Frontend", "skills": [{}]}]}),
+            payload=_patch({"skills": [{"name": "   "}]}),
             current_user=user,
             db=db,
         )

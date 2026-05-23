@@ -1,13 +1,14 @@
 """WriterAgent — single agent that drafts a CV and self-corrects via a compile tool.
 
-The writer is the only LLM call in the CV pipeline. The required page count is
+The writer is the only LLM call in the CV pipeline. The maximum page count is
 chosen by the user (stored on the CvSession) and passed in per run — the model
 does not decide length. The writer drafts a CurriculumVitae, then uses the
 `compile_cv` tool to render it to PDF and read back the page count (plus the
 rendered PDF, which the client attaches so the model can see its own work). It
-iterates until the render hits the required page count, then returns the final
-CV. Free-text fields are escaped for LaTeX deterministically on the server, so
-the model writes plain text only.
+iterates until the render fits within the page ceiling (padding to fill space is
+forbidden — a shorter, denser CV is preferred), then returns the final CV.
+Free-text fields are escaped for LaTeX deterministically on the server, so the
+model writes plain text only.
 """
 
 from __future__ import annotations
@@ -71,35 +72,39 @@ SYSTEM_PROMPT = (
 
     "NO DUPLICATION:\n"
     "Each concrete fact (employer, project, achievement, technology, metric, award) "
-    "should appear exactly once. If the same project fits two sections, keep it where "
-    "it lands harder. Exceptions: the summary may name 1-2 anchor technologies, and "
-    "the skills list may name the top 3-5 headline technologies as a scannable index, "
-    "even if they also appear in bullets. Otherwise prune duplicates rather than "
-    "pad.\n\n"
+    "appears exactly once. The summary must NOT restate any bullet — it characterizes "
+    "the candidate (level, focus, headline stack); it does not preview achievements or "
+    "repeat metrics. The skills list MAY name headline technologies even if they also "
+    "appear in bullets (a skills section is a scannable index). Otherwise prune "
+    "duplicates rather than pad.\n\n"
 
-    "PAGE LENGTH — obey exactly; you do NOT choose it:\n"
-    "The user picks the length, given each turn as 'REQUIRED CV LENGTH'; the CV must "
-    "render to exactly that many pages. Draft to the matching budget, then let the "
-    "compile loop fine-tune the fit:\n"
+    "PAGE LENGTH — a ceiling, not a quota; you do NOT choose it:\n"
+    "The user picks the maximum length, given each turn as 'REQUIRED CV LENGTH'; the "
+    "CV must render to AT MOST that many pages. Fill the space with strong, relevant "
+    "material — but NEVER pad: if you genuinely run out of strong content, a shorter, "
+    "denser CV beats a padded one. The reader judges the CV by its weakest lines, not "
+    "its length. Treat the per-length notes below as upper bounds:\n"
     " - 1 page: summary 1-2 sentences (<=35 words); up to 3 roles (recent 3-4 "
     "bullets, older 2-3); up to 2 education entries; 2-3 skill rows (<=12 items each); "
     "0-2 projects; 0-2 awards (omit the section if weak).\n"
     " - 2 pages: summary 2-3 sentences (<=60 words); up to 5 roles (top 2 get 4-5 "
     "bullets, rest 2-3); up to 3 education entries; 3-5 skill rows (<=14 items each); "
     "0-4 projects; 0-4 awards.\n"
-    " - 3 pages: budget freely, but every entry must earn its line.\n\n"
+    " - 3 pages: every entry must earn its line.\n\n"
 
     "COMPILE-AND-CHECK LOOP — REQUIRED before returning any CurriculumVitae:\n"
     "The `compile_cv` tool renders the CV to PDF and returns `page_count` and "
-    "`fits_target`, attaching the PDF so you can SEE the result.\n"
-    " 1. Draft the CV sized to the budget.\n"
+    "`fits_target`, attaching the rendered PDF. Inspect that PDF every iteration — read "
+    "it the way a recruiter would and judge the layout, not just the page count.\n"
+    " 1. Draft the CV within the budget.\n"
     " 2. Call `compile_cv` with the full draft.\n"
-    " 3. Read `page_count` and inspect the PDF: if too long, trim the weakest "
-    "bullets, then the weakest entries, then shorten the summary (tighten before "
-    "cutting substance); if thin (final page <~85% full), expand truthfully with "
-    "deeper bullets, more responsibilities, and relevant projects/awards/skills.\n"
+    " 3. Read `page_count` and inspect the attached PDF: if it exceeds the ceiling, "
+    "trim the weakest bullets, then the weakest entries, then tighten the summary "
+    "(tighten before cutting substance). If it fits, you are DONE — do not add filler, "
+    "restate content, or pad lists to fill whitespace; under-filling is fine.\n"
     " 4. Re-compile after each revision. Return the CV only once `fits_target` is "
-    "true (or you have genuinely run out of truthful edits).\n"
+    "true (page_count within the ceiling), or you have genuinely run out of truthful "
+    "edits.\n"
     "Do NOT call `compile_cv` for QuestionsToImproveCv or OtherMessage.\n\n"
 
     "TEXT FORMATTING:\n"
@@ -123,9 +128,9 @@ def _compile_tool_schema() -> dict[str, Any]:
         "name": "compile_cv",
         "description": (
             "Render a candidate CV to PDF and return its page count so you can check "
-            "it against the required length before finalizing. Pass the full CV as plain "
-            "text (the server escapes LaTeX characters for you). The rendered PDF is "
-            "attached to the next turn so you can review the layout."
+            "it stays within the maximum length before finalizing. Pass the full CV as "
+            "plain text (the server escapes LaTeX characters for you). The rendered PDF "
+            "is attached to the next turn so you can review the layout."
         ),
         "parameters": CurriculumVitae.model_json_schema(),
     }
@@ -143,8 +148,8 @@ def _compile_handler(template_slug: str, target_pages: int):
         payload: dict[str, Any] = {
             "success": result.success,
             "page_count": result.page_count,
-            "required_pages": target_pages,
-            "fits_target": result.success and result.page_count == target_pages,
+            "max_pages": target_pages,
+            "fits_target": result.success and 1 <= result.page_count <= target_pages,
         }
         if not result.success:
             payload["error"] = (result.error or "(no error)")[-600:]
@@ -177,8 +182,9 @@ class WriterAgent:
     ) -> WriterResult:
         directive = (
             f"=== REQUIRED CV LENGTH ===\n"
-            f"This CV MUST render to exactly {target_pages} page(s). Use the compile_cv "
-            f"tool and revise until page_count == {target_pages}.\n\n"
+            f"This CV MUST fit within {target_pages} page(s) — a maximum, not a quota. "
+            f"Use the compile_cv tool and revise until page_count <= {target_pages}. "
+            f"Fill the space with strong material, but never pad to reach the limit.\n\n"
         )
         parsed, conv_id = self.client.get_structured_output(
             directive + prompt_input,
