@@ -121,10 +121,13 @@ class CvSession(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     conversation_id: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
-    kind: Mapped[str] = mapped_column(Text, nullable=False, default="cv", server_default="cv")
     status: Mapped[str] = mapped_column(Text, nullable=False, default="idle", server_default="idle")
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     job_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Requirements gate analysis (RequirementsAnalysis.model_dump), extracted once per session.
+    job_requirements: Mapped[dict | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )
     source_cv_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_cv_pdf_base64: Mapped[str | None] = mapped_column(Text, nullable=True)
     page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")

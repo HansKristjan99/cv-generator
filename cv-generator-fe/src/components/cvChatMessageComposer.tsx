@@ -21,8 +21,6 @@ export const CvChatMessageComposer = () => {
   const draftMessage = activeConversation?.draftMessage ?? "";
   const sessionId = activeConversation?.activeSessionId ?? null;
   const messageHistory = activeConversation?.messageHistory ?? [];
-  const sessionKind =
-    activeConversation?.chatSessions.find((s) => s.id === sessionId)?.kind ?? "cv";
   const isBusy =
     activeConversation?.generationStatus === "loading" ||
     activeConversation?.enhanceStatus === "loading";
@@ -45,7 +43,7 @@ export const CvChatMessageComposer = () => {
         }),
       );
     } else {
-      void dispatch(sendMessage({ sessionId, userMessage: trimmed, kind: sessionKind }));
+      void dispatch(sendMessage({ sessionId, userMessage: trimmed, kind: "cv" }));
     }
   };
 

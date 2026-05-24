@@ -31,7 +31,6 @@ def _month_start() -> datetime:
 class SessionSummary(BaseModel):
     id: str
     title: str | None
-    kind: str
     message_count: int
     page_count: int
     status: str
@@ -52,7 +51,7 @@ def list_sessions(
     ).all()
     return [
         SessionSummary(
-            id=str(s.id), title=s.title, kind=s.kind, message_count=s.message_count,
+            id=str(s.id), title=s.title, message_count=s.message_count,
             page_count=s.page_count, status=s.status, error=s.error,
             created_at=s.created_at,
         )
@@ -69,7 +68,6 @@ class ChatMessageResponse(BaseModel):
 
 class LoadConversationResponse(BaseModel):
     title: str | None
-    kind: str
     status: str
     error: str | None
     page_count: int
@@ -138,7 +136,6 @@ def get_session_messages(
     ]
     return LoadConversationResponse(
         title=cv_session.title,
-        kind=cv_session.kind,
         status=cv_session.status,
         error=cv_session.error,
         page_count=cv_session.page_count,

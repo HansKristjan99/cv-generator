@@ -60,6 +60,32 @@ def _get_session(session_id: uuid.UUID, user_id: uuid.UUID, db: Session) -> CvSe
     return session
 
 
+def _pdf_to_tempfile(pdf_base64: str) -> Path:
+    """Materialize a stored source PDF to a temp file for re-attachment to the agent."""
+    with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp.write(base64.b64decode(pdf_base64))
+        return Path(tmp.name)
+
+
+def _full_context_prompt(
+    db: Session,
+    user_id: uuid.UUID,
+    *,
+    source_text: str | None,
+    job_description: str | None,
+    message: str,
+    message_label: str = "USER MESSAGE",
+) -> str:
+    """Profile + source + job description + the user's message — the full context used
+    on the first turn and again when the user answers the requirements gate."""
+    return (
+        f"=== CANDIDATE'S STORED PROFILE ===\n{format_user_data(db, user_id)}\n\n"
+        f"=== SOURCE TEXT ===\n{source_text or '(none provided)'}\n\n"
+        f"=== JOB DESCRIPTION ===\n{job_description}\n\n"
+        f"=== {message_label} ===\n{message}"
+    )
+
+
 def _resolve_template_slug(template_id: str | None, user: User, db: Session) -> str:
     if template_id:
         tmpl = db.query(Template).filter(Template.id == template_id).first()
@@ -151,7 +177,6 @@ async def generate_cv(
             source_cv_text=text or None,
             source_cv_pdf_base64=source_cv_pdf_base64,
             page_count=page_count,
-            kind=kind,
             message_count=1,
             status="pending",
         )
@@ -161,11 +186,10 @@ async def generate_cv(
             if kind == "cover_letter"
             else "Help me write a CV tailored to this job."
         )
-        prompt_input = (
-            f"=== CANDIDATE'S STORED PROFILE ===\n{format_user_data(db, current_user.id)}\n\n"
-            f"=== SOURCE TEXT ===\n{text or '(none provided)'}\n\n"
-            f"=== JOB DESCRIPTION ===\n{job_description}\n\n"
-            f"=== USER MESSAGE ===\n{user_message or default_message}"
+        prompt_input = _full_context_prompt(
+            db, current_user.id,
+            source_text=text, job_description=job_description,
+            message=user_message or default_message,
         )
         openai_conversation_id = None
         user_message_text = user_message or default_message
@@ -178,42 +202,67 @@ async def generate_cv(
         cv_session = _get_session(session_id, current_user.id, db)
         if cv_session.status in {"pending", "running"}:
             raise HTTPException(409, "Conversation is still generating.")
-        if cv_session.conversation_id.startswith("pending-"):
-            raise HTTPException(409, "Conversation is not ready for follow-up messages.")
         if not current_user.is_unlimited and cv_session.message_count >= MAX_MESSAGES_PER_SESSION:
             raise HTTPException(429, f"Conversation limit of {MAX_MESSAGES_PER_SESSION} messages reached.")
-        cv_session.message_count += 1
-        cv_session.status = "pending"
-        cv_session.error = None
 
-        # `kind` stays as the per-turn value from the form, so a CV session can
-        # produce a cover letter (and vice versa) on a follow-up turn.
-        openai_conversation_id = cv_session.conversation_id
-
-        # Inject the latest structured document so manual edits are visible to the agent.
-        latest_msgs = db.scalars(
+        assistant_msgs = db.scalars(
             select(Message)
             .where(Message.cv_session_id == cv_session.id, Message.role == "assistant")
             .order_by(Message.created_at.desc())
         ).all()
-        latest_structured: dict | None = None
-        for m in latest_msgs:
-            if m.content.get("type") in ("cv", "cover_letter") and m.content.get("structured_data"):
-                latest_structured = m.content["structured_data"]
-                break
 
-        if latest_structured:
-            prompt_input = (
-                f"[Current document — use this as the base for any updates]\n"
-                f"{json.dumps(latest_structured, indent=2)}\n\n"
-                f"[User request]\n{user_message}"
+        # A still-"pending-" conversation means no writer run has happened yet — valid
+        # only when the requirements gate already asked questions and this turn answers
+        # them, in which case we rebuild the full first-turn context and write fresh.
+        post_gate = cv_session.conversation_id.startswith("pending-")
+        if post_gate and not any(m.content.get("type") == "question" for m in assistant_msgs):
+            raise HTTPException(409, "Conversation is not ready for follow-up messages.")
+
+        cv_session.message_count += 1
+        cv_session.status = "pending"
+        cv_session.error = None
+
+        if post_gate:
+            prompt_input = _full_context_prompt(
+                db, current_user.id,
+                source_text=cv_session.source_cv_text,
+                job_description=cv_session.job_description,
+                message=user_message,
+                message_label="USER MESSAGE (answers to the clarifying questions / new evidence)",
             )
+            openai_conversation_id = None
+            text = cv_session.source_cv_text
+            if not text and cv_session.source_cv_pdf_base64:
+                file_path = _pdf_to_tempfile(cv_session.source_cv_pdf_base64)
         else:
-            prompt_input = user_message
+            # `kind` stays as the per-turn value from the form, so a CV session can
+            # produce a cover letter (and vice versa) on a follow-up turn. Inject the
+            # latest structured document so the agent edits it in place.
+            openai_conversation_id = cv_session.conversation_id
+            latest_structured: dict | None = next(
+                (
+                    m.content["structured_data"]
+                    for m in assistant_msgs
+                    if m.content.get("type") in ("cv", "cover_letter")
+                    and m.content.get("structured_data")
+                ),
+                None,
+            )
+            if latest_structured:
+                prompt_input = (
+                    f"=== CURRENT DOCUMENT ===\n"
+                    f"The user is iterating on THIS exact document. Edit it in place: apply "
+                    f"only what the request below asks and keep everything else identical.\n"
+                    f"{json.dumps(latest_structured, indent=2)}\n\n"
+                    f"=== USER REQUEST ===\n{user_message}"
+                )
+            else:
+                prompt_input = user_message
+            text = None
+
         user_message_text = user_message
         job_description = cv_session.job_description
         page_count = cv_session.page_count
-        text = None
 
     template_slug = _resolve_template_slug(template_id, current_user, db)
     cv_session.status = "pending"

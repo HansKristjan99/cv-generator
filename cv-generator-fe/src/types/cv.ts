@@ -37,11 +37,6 @@ export type Award = {
   date: string | null;
 };
 
-export type Requirement = {
-  requirement: string;
-  why_satisfied_by_cv: string;
-};
-
 export type CvStructuredData = {
   name: string;
   location: string;
@@ -54,7 +49,6 @@ export type CvStructuredData = {
   skills: SkillSection[];
   projects: Project[];
   awards: Award[];
-  job_requirements: Requirement[];
 };
 
 export type ClStructuredData = {

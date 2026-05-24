@@ -14,7 +14,6 @@ def _minimal_cv() -> CurriculumVitae:
         skills=[],
         projects=[],
         awards=[],
-        job_requirements=[],
     )
 
 
