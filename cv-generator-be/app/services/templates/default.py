@@ -14,25 +14,28 @@ from app.schemas import (
     Project,
     SkillSection,
 )
+from app.config import (
+    DEFAULT_TEMPLATE_FONT_PT,
+    DEFAULT_TEMPLATE_MARGIN_CM,
+    DEFAULT_TEMPLATE_SECTION_SPACING_PT,
+)
 from app.services.latex_escape import escape_tex
 
-_FONT_PT = 10
-_MARGIN_CM = 1.2
-_SECTION_SPACING_PT = 8
-
 _PREAMBLE = (
-    rf"\documentclass[{_FONT_PT}pt]{{article}}" + "\n"
+    rf"\documentclass[{DEFAULT_TEMPLATE_FONT_PT}pt]{{article}}" + "\n"
     r"\usepackage[utf8]{inputenc}" + "\n"
     r"\usepackage[T1]{fontenc}" + "\n"
     r"\usepackage[english]{babel}" + "\n"
-    rf"\usepackage[left={_MARGIN_CM:.2f}cm,top={_MARGIN_CM:.2f}cm,"
-    rf"right={_MARGIN_CM:.2f}cm,bottom={_MARGIN_CM:.2f}cm]{{geometry}}" + "\n"
+    rf"\usepackage[left={DEFAULT_TEMPLATE_MARGIN_CM:.2f}cm,"
+    rf"top={DEFAULT_TEMPLATE_MARGIN_CM:.2f}cm,"
+    rf"right={DEFAULT_TEMPLATE_MARGIN_CM:.2f}cm,"
+    rf"bottom={DEFAULT_TEMPLATE_MARGIN_CM:.2f}cm]{{geometry}}" + "\n"
     r"\usepackage[hidelinks]{hyperref}" + "\n"
     r"\usepackage{parskip}" + "\n"
     r"\usepackage{xcolor}" + "\n"
     r"\pagestyle{empty}" + "\n"
     r"\setlength{\parskip}{0pt}" + "\n"
-    rf"\newcommand{{\cvsection}}[1]{{\vspace{{{_SECTION_SPACING_PT}pt}}"
+    rf"\newcommand{{\cvsection}}[1]{{\vspace{{{DEFAULT_TEMPLATE_SECTION_SPACING_PT}pt}}"
     r"{\large \textbf{#1}}\\[-5pt]{\color{black!35}\hrule height 0.4pt}\vspace{5pt}}" + "\n"
     r"\newcommand{\cventry}[4]{\textbf{#1} \hfill #2\\\textit{#3} \hfill #4}" + "\n"
     r"\newenvironment{cvitemize}{\begin{list}{$\bullet$}"

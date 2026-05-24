@@ -15,8 +15,14 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import (
+    COVER_LETTER_TARGET_PAGES,
+    CV_PAGE_COUNT_OPTIONS,
+    DEFAULT_CV_PAGE_COUNT,
+    DEFAULT_TEMPLATE_SLUG,
+    INITIAL_SESSION_MESSAGE_COUNT,
     MAX_CV_TEXT_CHARS,
     MAX_FILE_SIZE_BYTES,
+    MAX_FILE_SIZE_MB,
     MAX_JOB_DESCRIPTION_CHARS,
     MAX_MESSAGES_PER_SESSION,
     MAX_SESSIONS_PER_MONTH,
@@ -95,7 +101,7 @@ def _resolve_template_slug(template_id: str | None, user: User, db: Session) -> 
         tmpl = db.query(Template).filter(Template.id == user.preferred_template_id).first()
         if tmpl:
             return tmpl.slug
-    return "default"
+    return DEFAULT_TEMPLATE_SLUG
 
 
 class StartGenerateResponse(BaseModel):
@@ -113,7 +119,7 @@ class GenerateForm(BaseModel):
     file: UploadFile | None = None
     session_id: uuid.UUID | None = None
     template_id: str | None = None
-    page_count: int = 1
+    page_count: int = DEFAULT_CV_PAGE_COUNT
     kind: str = "cv"
 
 
@@ -143,9 +149,10 @@ async def generate_cv(
         raise HTTPException(400, "kind must be 'cv' or 'cover_letter'.")
     # Cover letters always render to one page; page length only applies to CVs.
     if kind == "cover_letter":
-        page_count = 1
-    if page_count not in (1, 2, 3):
-        raise HTTPException(400, "page_count must be 1, 2, or 3.")
+        page_count = COVER_LETTER_TARGET_PAGES
+    if page_count not in CV_PAGE_COUNT_OPTIONS:
+        allowed = ", ".join(str(option) for option in CV_PAGE_COUNT_OPTIONS)
+        raise HTTPException(400, f"page_count must be one of: {allowed}.")
 
     if session_id is None:
         if not (text or file) or not job_description:
@@ -162,7 +169,7 @@ async def generate_cv(
         if file is not None:
             file_bytes = await file.read()
             if len(file_bytes) > MAX_FILE_SIZE_BYTES:
-                raise HTTPException(413, f"File exceeds {MAX_FILE_SIZE_BYTES // (1024 * 1024)} MB limit.")
+                raise HTTPException(413, f"File exceeds {MAX_FILE_SIZE_MB} MB limit.")
             with NamedTemporaryFile(delete=False, suffix=Path(file.filename or "").suffix) as tmp:
                 tmp.write(file_bytes)
                 file_path = Path(tmp.name)
@@ -177,7 +184,7 @@ async def generate_cv(
             source_cv_text=text or None,
             source_cv_pdf_base64=source_cv_pdf_base64,
             page_count=page_count,
-            message_count=1,
+            message_count=INITIAL_SESSION_MESSAGE_COUNT,
             status="pending",
         )
 

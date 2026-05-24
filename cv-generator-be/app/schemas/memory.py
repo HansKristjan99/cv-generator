@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, Field
 
+from app.config import MAX_MEMORY_NOTE_CHARS
+
 
 class ExtractedJobExperienceBullet(BaseModel):
     bullet_points: str = Field(..., description="A single concrete achievement or responsibility.")
@@ -43,7 +45,7 @@ class ExtractedAward(BaseModel):
 class ExtractedMemoryNote(BaseModel):
     content: str = Field(
         ...,
-        max_length=600,
+        max_length=MAX_MEMORY_NOTE_CHARS,
         description=(
             "A concise durable CV-relevant fact that does not fit any structured category. "
             "Use sparingly; prefer jobs, education, projects, skills, or awards whenever possible."
@@ -65,7 +67,10 @@ class NewUserData(BaseModel):
     awards: list[ExtractedAward] = Field(..., description="New awards not already stored.")
     notes: list[ExtractedMemoryNote] = Field(
         default_factory=list,
-        description="Rare freeform notes under 600 chars. Empty list unless the fact cannot be represented elsewhere.",
+        description=(
+            f"Rare freeform notes under {MAX_MEMORY_NOTE_CHARS} chars. Empty list "
+            "unless the fact cannot be represented elsewhere."
+        ),
     )
 
 

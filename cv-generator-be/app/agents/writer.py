@@ -20,15 +20,17 @@ from pathlib import Path
 from typing import Any
 
 from app.agents.writer_guide import CV_GUIDE
+from app.config import (
+    COMPILE_TOOL_ERROR_CHARS,
+    DEFAULT_TEMPLATE_SLUG,
+    WRITER_MAX_TOOL_ITERATIONS,
+)
 from app.schemas import CurriculumVitae, CVWriterResponse
 from app.services.latex import compile_latex_to_pdf, cv_to_latex
 from app.services.latex_escape import escape_cv_for_latex
 from app.services.openai_client import OpenAIClient
 
 logger = logging.getLogger(__name__)
-
-# Enough parse rounds for length fitting, a quality-review pass, and a final answer.
-_MAX_TOOL_ITERATIONS = 10
 
 
 SYSTEM_PROMPT = (
@@ -170,7 +172,7 @@ def _compile_handler(template_slug: str, target_pages: int):
             "fits_target": result.success and 1 <= result.page_count <= target_pages,
         }
         if not result.success:
-            payload["error"] = (result.error or "(no error)")[-600:]
+            payload["error"] = (result.error or "(no error)")[-COMPILE_TOOL_ERROR_CHARS:]
         logger.info(
             "compile_cv: success=%s page_count=%d required=%d",
             result.success, result.page_count, target_pages,
@@ -194,7 +196,7 @@ class WriterAgent:
         prompt_input: str,
         *,
         target_pages: int,
-        template_slug: str = "default",
+        template_slug: str = DEFAULT_TEMPLATE_SLUG,
         file: Path | None = None,
         conversation_id: str | None = None,
     ) -> WriterResult:
@@ -213,7 +215,7 @@ class WriterAgent:
             conversation_id=conversation_id,
             tools=[_compile_tool_schema()],
             tool_handler=_compile_handler(template_slug, target_pages),
-            max_tool_iterations=_MAX_TOOL_ITERATIONS,
+            max_tool_iterations=WRITER_MAX_TOOL_ITERATIONS,
         )
         if parsed is None:
             raise RuntimeError("WriterAgent: model returned no parsed output.")

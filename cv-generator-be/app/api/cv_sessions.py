@@ -14,6 +14,7 @@ from app.config import (
     MAX_INVENTS_PER_MONTH,
     MAX_MESSAGES_PER_SESSION,
     MAX_SESSIONS_PER_MONTH,
+    SESSION_LIST_LIMIT,
 )
 from app.db import get_db
 from app.models import CvSession, Message
@@ -47,7 +48,7 @@ def list_sessions(
         select(CvSession)
         .where(CvSession.user_id == current_user.id)
         .order_by(CvSession.created_at.desc())
-        .limit(50)
+        .limit(SESSION_LIST_LIMIT)
     ).all()
     return [
         SessionSummary(

@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.config import MAX_MEMORY_NOTE_CHARS
 from app.db import get_db
 from app.models import (
     Award,
@@ -144,7 +145,7 @@ class AwardPatch(StrictModel):
 class MemoryNotePatch(StrictModel):
     id: IdIn = None
     delete: bool = False
-    content: str | None = Field(default=None, max_length=600)
+    content: str | None = Field(default=None, max_length=MAX_MEMORY_NOTE_CHARS)
 
 
 class UserMemoryPatch(StrictModel):

@@ -5,6 +5,7 @@ from typing import Any, Callable, Tuple, TypeVar
 from openai import OpenAI
 from pydantic import BaseModel
 
+from app.config import OPENAI_CONVERSATION_ITEM_CHAR_CAP, OPENAI_DEFAULT_TOOL_ITERATIONS
 from app.src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -26,7 +27,11 @@ class OpenAIClient:
         )
         return response.output_text
 
-    def get_conversation_transcript(self, conversation_id: str, item_char_cap: int = 4000) -> str:
+    def get_conversation_transcript(
+        self,
+        conversation_id: str,
+        item_char_cap: int = OPENAI_CONVERSATION_ITEM_CHAR_CAP,
+    ) -> str:
         """Render a conversation's user/assistant turns as plain text. Read-only.
 
         Skips the system prompt and soft-caps each item so a long conversation
@@ -66,7 +71,7 @@ class OpenAIClient:
         conversation_id: str | None = None,
         tools: list[dict] | None = None,
         tool_handler: ToolHandler | None = None,
-        max_tool_iterations: int = 4,
+        max_tool_iterations: int = OPENAI_DEFAULT_TOOL_ITERATIONS,
     ) -> Tuple[T | None, str]:
         if not conversation_id:
             conversation_id = self.init_conversation(system_prompt or "")

@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agents import CoverLetterAgent, RequirementsAgent, SessionTitleAgent, WriterAgent
-from app.config import MODEL
+from app.config import MODEL, REQUIREMENTS_MAX_GATE_QUESTIONS, SESSION_ERROR_MESSAGE_CHARS
 from app.db import SessionLocal
 from app.models import CvSession, Message, User
 from app.schemas import CoverLetter, CurriculumVitae, OtherMessage, RequirementsAnalysis
@@ -27,9 +27,6 @@ from app.services.openai_client import OpenAIClient
 from app.services.user_data import format_user_data, update_user_memory
 
 logger = logging.getLogger(__name__)
-
-# Cap on clarifying questions the requirements gate will ask in one turn.
-_MAX_GATE_QUESTIONS = 3
 
 
 class PipelineResult(BaseModel):
@@ -87,7 +84,7 @@ def _requirements_gate(
         return None, ""
 
     if ask_eligible:
-        unmet = unmet_must_haves(analysis)[:_MAX_GATE_QUESTIONS]
+        unmet = unmet_must_haves(analysis)[:REQUIREMENTS_MAX_GATE_QUESTIONS]
         if unmet:
             questions = [
                 {
@@ -301,7 +298,7 @@ def run_pipeline(
             cv_session = db.get(CvSession, cv_session_id)
             if cv_session:
                 cv_session.status = "failed"
-                cv_session.error = str(exc)[:500]
+                cv_session.error = str(exc)[:SESSION_ERROR_MESSAGE_CHARS]
                 db.commit()
     except Exception:
         logger.exception("Unrecoverable error in background task for session %s", cv_session_id)
