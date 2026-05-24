@@ -50,7 +50,6 @@ def test_cv_to_latex() -> None:
         skills=[],
         projects=[],
         awards=[],
-        job_requirements=[],
     )
     latex_str = cv_to_latex(cv)
     assert "\\begin{document}" in latex_str

@@ -7,6 +7,12 @@ from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, In
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.config import (
+    DEFAULT_CV_PAGE_COUNT,
+    INITIAL_SESSION_INVENT_COUNT,
+    INITIAL_SESSION_MESSAGE_COUNT,
+    MAX_MEMORY_NOTE_CHARS,
+)
 from app.db import Base
 
 
@@ -121,15 +127,31 @@ class CvSession(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     conversation_id: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
-    kind: Mapped[str] = mapped_column(Text, nullable=False, default="cv", server_default="cv")
     status: Mapped[str] = mapped_column(Text, nullable=False, default="idle", server_default="idle")
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     job_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Requirements gate analysis (RequirementsAnalysis.model_dump), extracted once per session.
+    job_requirements: Mapped[dict | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )
     source_cv_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_cv_pdf_base64: Mapped[str | None] = mapped_column(Text, nullable=True)
-    page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
-    message_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    invent_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    page_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=DEFAULT_CV_PAGE_COUNT,
+        server_default=str(DEFAULT_CV_PAGE_COUNT),
+    )
+    message_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=INITIAL_SESSION_MESSAGE_COUNT,
+    )
+    invent_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=INITIAL_SESSION_INVENT_COUNT,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -163,5 +185,8 @@ class MemoryNote(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
     __table_args__ = (
-        CheckConstraint("length(content) <= 600", name="ck_memory_notes_content_len"),
+        CheckConstraint(
+            f"length(content) <= {MAX_MEMORY_NOTE_CHARS}",
+            name="ck_memory_notes_content_len",
+        ),
     )

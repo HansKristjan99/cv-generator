@@ -5,10 +5,11 @@ chosen by the user (stored on the CvSession) and passed in per run — the model
 does not decide length. The writer drafts a CurriculumVitae, then uses the
 `compile_cv` tool to render it to PDF and read back the page count (plus the
 rendered PDF, which the client attaches so the model can see its own work). It
-iterates until the render fits within the page ceiling (padding to fill space is
-forbidden — a shorter, denser CV is preferred), then returns the final CV.
-Free-text fields are escaped for LaTeX deterministically on the server, so the
-model writes plain text only.
+iterates until the render fits within the page limit AND passes a quality
+self-review, then returns the final CV. On a follow-up turn that carries a
+current document, it edits that CV in place rather than regenerating it, so each
+round converges instead of churning the whole CV. Free-text fields are escaped
+for LaTeX deterministically on the server, so the model writes plain text only.
 """
 
 from __future__ import annotations
@@ -19,6 +20,11 @@ from pathlib import Path
 from typing import Any
 
 from app.agents.writer_guide import CV_GUIDE
+from app.config import (
+    COMPILE_TOOL_ERROR_CHARS,
+    DEFAULT_TEMPLATE_SLUG,
+    WRITER_MAX_TOOL_ITERATIONS,
+)
 from app.schemas import CurriculumVitae, CVWriterResponse
 from app.services.latex import compile_latex_to_pdf, cv_to_latex
 from app.services.latex_escape import escape_cv_for_latex
@@ -26,21 +32,16 @@ from app.services.openai_client import OpenAIClient
 
 logger = logging.getLogger(__name__)
 
-# Enough parse rounds for several compile/adjust cycles plus a final answer.
-_MAX_TOOL_ITERATIONS = 7
-
 
 SYSTEM_PROMPT = (
     "You are a senior technical recruiter and CV writer. Produce modern, "
     "ATS-friendly CVs.\n\n"
 
     "RESPONSE VARIANTS — pick exactly one:\n"
-    " (1) CurriculumVitae — the user wants a CV generated or updated and the source "
-    "material satisfies the job's requirements.\n"
-    " (2) QuestionsToImproveCv — one or more job requirements are not fully satisfied "
-    "by the source material and stored profile; ask for the missing evidence INSTEAD "
-    "of generating a CV. When in doubt, prefer asking.\n"
-    " (3) OtherMessage — plain-text reply for conversational turns, refusals, or "
+    " (1) CurriculumVitae — the user wants a CV generated or updated. Whether the "
+    "source material covers the job's requirements has already been checked upstream, "
+    "so your job is to write the CV.\n"
+    " (2) OtherMessage — plain-text reply for conversational turns, refusals, or "
     "anything that does not need a CV (thanks, questions about the tool, requests you "
     "cannot fulfill).\n\n"
 
@@ -51,24 +52,23 @@ SYSTEM_PROMPT = (
     "current request. NEVER invent facts absent from the source material or stored "
     "profile.\n\n"
 
+    "EDITING AN EXISTING CV — surgical edits, not regeneration:\n"
+    "If the input includes a CURRENT DOCUMENT, the user is iterating on that exact "
+    "CV. You are EDITING, not regenerating: apply ONLY the change the user asked for "
+    "and keep every other field, bullet, and ordering byte-identical to the current "
+    "document. Do NOT rewrite, re-rank, re-word, or 'improve' sections the user did "
+    "not mention — silent churn in untouched sections is a bug, not a feature. If the "
+    "requested change would push the CV over the page limit, first tighten the text "
+    "you added or edited; only if it still overflows, cut the single weakest UNTOUCHED "
+    "bullet. This keeps each round converging toward done.\n\n"
+
     "TAILORING TO THE JOB DESCRIPTION:\n"
     "If a JOB DESCRIPTION is provided, tailor the CV to that role: surface the most "
     "relevant experience, skills, and projects first, and mirror the role's "
     "terminology without fabricating. Do not add bullets irrelevant to the role "
-    "unless an experience has nothing else to offer. Populate `job_requirements` with "
-    "one entry per distinct requirement; set `why_satisfied_by_cv` to the specific CV "
-    "element that satisfies it (role, project, skill, education, etc.), or to the "
-    "literal string 'Not satisfied' if no evidence exists. If no JOB DESCRIPTION is "
-    "provided, return `job_requirements` as an empty list.\n\n"
-
-    "ASK INSTEAD OF WRITING WHEN REQUIREMENTS ARE UNMET:\n"
-    "After mapping requirements, if NOT ALL are satisfied — i.e. any would be marked "
-    "'Not satisfied' from the source material and stored profile — do NOT return a "
-    "CurriculumVitae. Return QuestionsToImproveCv with one targeted question per "
-    "unsatisfied requirement (set `corresponding_requirement` on each) asking for the "
-    "specific missing evidence. Generate the CV only once every requirement is "
-    "satisfied, or the user explicitly tells you to proceed without the missing "
-    "evidence. A few clarifying questions beat a CV with gaps.\n\n"
+    "unless an experience has nothing else to offer. If a JOB REQUIREMENTS checklist "
+    "is provided, make sure every requirement the candidate can support is clearly "
+    "evidenced in the CV.\n\n"
 
     "NO DUPLICATION:\n"
     "Each concrete fact (employer, project, achievement, technology, metric, award) "
@@ -94,18 +94,38 @@ SYSTEM_PROMPT = (
 
     "COMPILE-AND-CHECK LOOP — REQUIRED before returning any CurriculumVitae:\n"
     "The `compile_cv` tool renders the CV to PDF and returns `page_count` and "
-    "`fits_target`, attaching the rendered PDF. Inspect that PDF every iteration — read "
-    "it the way a recruiter would and judge the layout, not just the page count.\n"
-    " 1. Draft the CV within the budget.\n"
-    " 2. Call `compile_cv` with the full draft.\n"
-    " 3. Read `page_count` and inspect the attached PDF: if it exceeds the ceiling, "
-    "trim the weakest bullets, then the weakest entries, then tighten the summary "
-    "(tighten before cutting substance). If it fits, you are DONE — do not add filler, "
-    "restate content, or pad lists to fill whitespace; under-filling is fine.\n"
-    " 4. Re-compile after each revision. Return the CV only once `fits_target` is "
-    "true (page_count within the ceiling), or you have genuinely run out of truthful "
-    "edits.\n"
-    "Do NOT call `compile_cv` for QuestionsToImproveCv or OtherMessage.\n\n"
+    "`fits_target` (true when page_count <= the limit), attaching the PDF so you can "
+    "SEE the result. A CV that merely fits the page is NOT done — it must also pass "
+    "the quality review.\n"
+    " 1. Draft the CV within the page budget.\n"
+    " 2. Call `compile_cv` with the full draft and inspect the returned PDF.\n"
+    " 3. If it exceeds the page limit, trim the weakest bullets, then the weakest "
+    "entries, then tighten the summary, and re-compile. Do NOT pad to fill space.\n"
+    " 4. Once it fits, run the QUALITY REVIEW below on the PDF. Fix every failure, "
+    "re-compiling after each change and confirming it STILL fits the page limit.\n"
+    " 5. Return the CV only once `fits_target` is true AND the quality review passes "
+    "(or you have genuinely run out of truthful edits).\n"
+    "Do NOT call `compile_cv` for an OtherMessage reply.\n\n"
+
+    "QUALITY REVIEW — run on the rendered PDF before returning:\n"
+    "Open the attached PDF, read it as a recruiter would, and fix any failure:\n"
+    " - Duplication: no achievement, metric, employer, or technology repeats across "
+    "the summary, bullets, and skills (a skills row may re-list headline tech; the "
+    "summary must NOT restate a bullet).\n"
+    " - Impact: every bullet leads with a strong verb and quantifies impact wherever a "
+    "number plausibly exists; no vague duty bullets.\n"
+    " - Job fit: the most important job-description requirements are visibly evidenced "
+    "in experience/skills, not merely name-dropped.\n"
+    " - No padding: no filler bullets and no laundry-list coursework or skills added "
+    "only to fill space; a cleaner, slightly shorter CV beats a padded one.\n"
+    " - Layout: strongest items first; the page looks clean — no one-word overflow "
+    "lines, orphaned headings, or lopsided whitespace.\n"
+    "The page limit is a HARD cap: never exceed it to satisfy a quality fix — make "
+    "room by tightening or cutting the weakest content instead, then re-compile to "
+    "confirm it still fits. If a quality issue genuinely cannot be fixed within the "
+    "limit, keep the CV fitting and prefer the most important content. When EDITING an "
+    "existing CV, scope this review to the change you made plus page-fit and layout — "
+    "do not rewrite untouched sections to satisfy the rubric.\n\n"
 
     "TEXT FORMATTING:\n"
     "Write every field as plain prose — no LaTeX, markdown, or HTML, and no character "
@@ -152,7 +172,7 @@ def _compile_handler(template_slug: str, target_pages: int):
             "fits_target": result.success and 1 <= result.page_count <= target_pages,
         }
         if not result.success:
-            payload["error"] = (result.error or "(no error)")[-600:]
+            payload["error"] = (result.error or "(no error)")[-COMPILE_TOOL_ERROR_CHARS:]
         logger.info(
             "compile_cv: success=%s page_count=%d required=%d",
             result.success, result.page_count, target_pages,
@@ -176,15 +196,16 @@ class WriterAgent:
         prompt_input: str,
         *,
         target_pages: int,
-        template_slug: str = "default",
+        template_slug: str = DEFAULT_TEMPLATE_SLUG,
         file: Path | None = None,
         conversation_id: str | None = None,
     ) -> WriterResult:
         directive = (
             f"=== REQUIRED CV LENGTH ===\n"
-            f"This CV MUST fit within {target_pages} page(s) — a maximum, not a quota. "
-            f"Use the compile_cv tool and revise until page_count <= {target_pages}. "
-            f"Fill the space with strong material, but never pad to reach the limit.\n\n"
+            f"This CV MUST fit within {target_pages} page(s) — a hard maximum, not a "
+            f"quota. Use the compile_cv tool, then run the quality review, and return "
+            f"only once it fits (page_count <= {target_pages}) AND reads well. Never "
+            f"pad to reach the limit.\n\n"
         )
         parsed, conv_id = self.client.get_structured_output(
             directive + prompt_input,
@@ -194,7 +215,7 @@ class WriterAgent:
             conversation_id=conversation_id,
             tools=[_compile_tool_schema()],
             tool_handler=_compile_handler(template_slug, target_pages),
-            max_tool_iterations=_MAX_TOOL_ITERATIONS,
+            max_tool_iterations=WRITER_MAX_TOOL_ITERATIONS,
         )
         if parsed is None:
             raise RuntimeError("WriterAgent: model returned no parsed output.")

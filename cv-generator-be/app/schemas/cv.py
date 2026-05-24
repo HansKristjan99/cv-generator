@@ -5,23 +5,6 @@ from typing import Union
 from pydantic import BaseModel, Field
 
 
-class Requirement(BaseModel):
-    """One requirement extracted from the job description, paired with CV evidence."""
-
-    requirement: str = Field(
-        ...,
-        description="A single requirement lifted verbatim or tightly paraphrased from the job description.",
-    )
-    why_satisfied_by_cv: str = Field(
-        ...,
-        description=(
-            "Point to the exact part of the CV that satisfies this requirement "
-            "(role, project, skill, education, etc.). "
-            "If nothing in the CV satisfies it, write the literal string 'Not satisfied'."
-        ),
-    )
-
-
 class JobExperience(BaseModel):
     """A single role in work history."""
 
@@ -92,10 +75,6 @@ class CurriculumVitae(BaseModel):
     skills: list[SkillSection] = Field(..., description="Skills grouped into titled sections.")
     projects: list[Project] = Field(..., description="Notable projects/OSS. Empty list if none.")
     awards: list[Award] = Field(..., description="Awards, publications, patents, etc. Empty list if none.")
-    job_requirements: list[Requirement] = Field(
-        ...,
-        description="One entry per distinct requirement in the job description. Empty list if no JD.",
-    )
 
 
 class QuestionToImproveCv(BaseModel):
@@ -136,15 +115,17 @@ class OtherMessage(BaseModel):
 
 
 class CVWriterResponse(BaseModel):
-    """Top-level WriterAgent output: CV, clarifying questions, or plain-text reply."""
+    """Top-level WriterAgent output: a CV or a plain-text reply.
 
-    content: Union[CurriculumVitae, QuestionsToImproveCv, OtherMessage] = Field(
+    Whether to ask the candidate clarifying questions is decided up front by the
+    requirements gate, not by the writer — so the writer only writes or chats."""
+
+    content: Union[CurriculumVitae, OtherMessage] = Field(
         ...,
         description=(
             "Pick exactly one variant: "
             "(1) CurriculumVitae — the user wants a CV generated/updated; "
-            "(2) QuestionsToImproveCv — source doesn't satisfy the JD; "
-            "(3) OtherMessage — plain-text reply for conversational turns, refusals, or "
+            "(2) OtherMessage — plain-text reply for conversational turns, refusals, or "
             "messages that don't require regenerating the CV."
         ),
     )

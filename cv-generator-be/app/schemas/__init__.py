@@ -18,10 +18,10 @@ from app.schemas.cv import (
     Project,
     QuestionsToImproveCv,
     QuestionToImproveCv,
-    Requirement,
     SkillSection,
 )
 from app.schemas.invent import InventedAnswer, InventedExperience
+from app.schemas.requirements import JobRequirement, RequirementsAnalysis
 from app.schemas.memory import (
     ExtractedAward,
     ExtractedEducationExperience,
@@ -49,12 +49,13 @@ __all__ = [
     "InventedAnswer",
     "InventedExperience",
     "JobExperience",
+    "JobRequirement",
     "MemoryExtraction",
     "NewUserData",
     "OtherMessage",
     "Project",
     "QuestionsToImproveCv",
     "QuestionToImproveCv",
-    "Requirement",
+    "RequirementsAnalysis",
     "SkillSection",
 ]

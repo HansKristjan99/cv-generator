@@ -14,6 +14,7 @@ from app.config import (
     MAX_INVENTS_PER_MONTH,
     MAX_MESSAGES_PER_SESSION,
     MAX_SESSIONS_PER_MONTH,
+    SESSION_LIST_LIMIT,
 )
 from app.db import get_db
 from app.models import CvSession, Message
@@ -31,7 +32,6 @@ def _month_start() -> datetime:
 class SessionSummary(BaseModel):
     id: str
     title: str | None
-    kind: str
     message_count: int
     page_count: int
     status: str
@@ -48,11 +48,11 @@ def list_sessions(
         select(CvSession)
         .where(CvSession.user_id == current_user.id)
         .order_by(CvSession.created_at.desc())
-        .limit(50)
+        .limit(SESSION_LIST_LIMIT)
     ).all()
     return [
         SessionSummary(
-            id=str(s.id), title=s.title, kind=s.kind, message_count=s.message_count,
+            id=str(s.id), title=s.title, message_count=s.message_count,
             page_count=s.page_count, status=s.status, error=s.error,
             created_at=s.created_at,
         )
@@ -69,7 +69,6 @@ class ChatMessageResponse(BaseModel):
 
 class LoadConversationResponse(BaseModel):
     title: str | None
-    kind: str
     status: str
     error: str | None
     page_count: int
@@ -138,7 +137,6 @@ def get_session_messages(
     ]
     return LoadConversationResponse(
         title=cv_session.title,
-        kind=cv_session.kind,
         status=cv_session.status,
         error=cv_session.error,
         page_count=cv_session.page_count,

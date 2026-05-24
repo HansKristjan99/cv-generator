@@ -8,6 +8,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from app.config import (
+    DEFAULT_TEMPLATE_SLUG,
+    LATEX_COMPILE_ERROR_TAIL_CHARS,
+    LATEX_COMPILE_TIMEOUT_SECONDS,
+)
 from app.schemas import CoverLetter, CurriculumVitae
 from app.services.templates import cover_letter, default, harvard_classic, rover
 
@@ -20,8 +25,8 @@ _RENDERERS: dict[str, Callable[[CurriculumVitae], str]] = {
 }
 
 
-def cv_to_latex(cv: CurriculumVitae, template_slug: str = "default") -> str:
-    renderer = _RENDERERS.get(template_slug) or _RENDERERS["default"]
+def cv_to_latex(cv: CurriculumVitae, template_slug: str = DEFAULT_TEMPLATE_SLUG) -> str:
+    renderer = _RENDERERS.get(template_slug) or _RENDERERS[DEFAULT_TEMPLATE_SLUG]
     return renderer(cv)
 
 
@@ -37,13 +42,13 @@ class CompileResult:
     error: str | None = None
 
 
-# Trailing slice of pdflatex output kept as the error message on failure.
-_ERROR_TAIL = 1200
-
 _PAGES_RE = re.compile(r"Output written on .+?\((\d+) pages?")
 
 
-def compile_latex_to_pdf(latex: str, timeout: float = 25.0) -> CompileResult:
+def compile_latex_to_pdf(
+    latex: str,
+    timeout: float = LATEX_COMPILE_TIMEOUT_SECONDS,
+) -> CompileResult:
     with tempfile.TemporaryDirectory() as tmpdir:
         tex_path = Path(tmpdir) / "cv.tex"
         tex_path.write_text(latex)
@@ -62,7 +67,7 @@ def compile_latex_to_pdf(latex: str, timeout: float = 25.0) -> CompileResult:
 
         pdf_path = Path(tmpdir) / "cv.pdf"
         if proc.returncode != 0 or not pdf_path.exists():
-            tail = (proc.stdout + proc.stderr)[-_ERROR_TAIL:]
+            tail = (proc.stdout + proc.stderr)[-LATEX_COMPILE_ERROR_TAIL_CHARS:]
             logger.warning("pdflatex compilation failed (returncode=%s)", proc.returncode)
             return CompileResult(success=False, error=tail)
 

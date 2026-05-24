@@ -6,6 +6,8 @@ from typing import Any, Callable, Tuple, TypeVar
 from openai import OpenAI
 from pydantic import BaseModel
 
+from app.config import OPENAI_CONVERSATION_ITEM_CHAR_CAP, OPENAI_DEFAULT_TOOL_ITERATIONS
+
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
@@ -15,15 +17,6 @@ T = TypeVar("T", bound=BaseModel)
 # and attaches it to the next input turn so the model can review the render.
 ToolHandlerResult = dict[str, Any] | tuple[dict[str, Any], bytes | None]
 ToolHandler = Callable[[str, dict[str, Any]], ToolHandlerResult]
-
-# Soft cap per conversation item so a long transcript (e.g. one carrying compiled
-# CV LaTeX) does not produce an oversized prompt.
-_ITEM_CHAR_CAP = 4000
-
-# Number of responses.parse rounds. Allows up to 3 tool (compile) calls plus a
-# final round that returns the parsed answer — see CV_SYSTEM_PROMPT.
-_MAX_TOOL_ITERATIONS = 4
-
 
 class OpenAIClient:
     def __init__(self, model_str: str) -> None:
@@ -51,8 +44,8 @@ class OpenAIClient:
             if not texts:
                 continue
             body = "\n".join(texts).strip()
-            if len(body) > _ITEM_CHAR_CAP:
-                body = body[:_ITEM_CHAR_CAP] + " […truncated]"
+            if len(body) > OPENAI_CONVERSATION_ITEM_CHAR_CAP:
+                body = body[:OPENAI_CONVERSATION_ITEM_CHAR_CAP] + " […truncated]"
             lines.append(f"{role.upper()}: {body}")
         return "\n\n".join(lines)
 
@@ -71,7 +64,7 @@ class OpenAIClient:
         conversation_id: str | None = None,
         tools: list[dict] | None = None,
         tool_handler: ToolHandler | None = None,
-        max_tool_iterations: int = _MAX_TOOL_ITERATIONS,
+        max_tool_iterations: int = OPENAI_DEFAULT_TOOL_ITERATIONS,
         attachments: list[tuple[str, bytes, str]] | None = None,
     ) -> Tuple[T | None, str]:
         if not conversation_id:

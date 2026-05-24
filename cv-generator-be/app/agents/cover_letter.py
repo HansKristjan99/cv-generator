@@ -13,15 +13,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from app.config import (
+    COMPILE_TOOL_ERROR_CHARS,
+    COVER_LETTER_MAX_TOOL_ITERATIONS,
+    COVER_LETTER_TARGET_PAGES,
+)
 from app.schemas import CoverLetter, CoverLetterWriterResponse
 from app.services.latex import compile_latex_to_pdf, cover_letter_to_latex
 from app.services.latex_escape import escape_cover_letter_for_latex
 from app.services.openai_client import OpenAIClient
 
 logger = logging.getLogger(__name__)
-
-_MAX_TOOL_ITERATIONS = 6
-_TARGET_PAGES = 1
 
 
 SYSTEM_PROMPT = (
@@ -145,11 +147,11 @@ def _compile_handler():
         payload: dict[str, Any] = {
             "success": result.success,
             "page_count": result.page_count,
-            "required_pages": _TARGET_PAGES,
-            "fits_target": result.success and result.page_count == _TARGET_PAGES,
+            "required_pages": COVER_LETTER_TARGET_PAGES,
+            "fits_target": result.success and result.page_count == COVER_LETTER_TARGET_PAGES,
         }
         if not result.success:
-            payload["error"] = (result.error or "(no error)")[-600:]
+            payload["error"] = (result.error or "(no error)")[-COMPILE_TOOL_ERROR_CHARS:]
         logger.info(
             "compile_cover_letter: success=%s page_count=%d",
             result.success, result.page_count,
@@ -189,7 +191,7 @@ class CoverLetterAgent:
             conversation_id=conversation_id,
             tools=[_compile_tool_schema()],
             tool_handler=_compile_handler(),
-            max_tool_iterations=_MAX_TOOL_ITERATIONS,
+            max_tool_iterations=COVER_LETTER_MAX_TOOL_ITERATIONS,
         )
         if parsed is None:
             raise RuntimeError("CoverLetterAgent: model returned no parsed output.")

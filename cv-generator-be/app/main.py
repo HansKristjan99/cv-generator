@@ -5,9 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import cv, cv_edit, cv_invent, cv_sessions, memory, templates, users
-from app.config import settings
-
-_LOG_FORMAT = "%(asctime)s %(levelname)-5s [%(name)s] %(message)s"
+from app.config import LOG_FORMAT, settings
 
 
 def _configure_logging() -> None:
@@ -19,7 +17,7 @@ def _configure_logging() -> None:
     if not isinstance(level, int):
         level = logging.INFO
 
-    logging.basicConfig(level=level, format=_LOG_FORMAT)
+    logging.basicConfig(level=level, format=LOG_FORMAT)
     for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
         logging.getLogger(name).setLevel(level)
     logging.getLogger(__name__).info("Logging configured at level %s", raw_level)

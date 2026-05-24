@@ -26,7 +26,7 @@ export type SendChatMessageInput = {
   jobDescription?: string;
   /** Required CV length in pages (1–3); only used when starting a new session. */
   pageCount?: number;
-  /** What to generate; defaults to "cv". Only used when starting a new session. */
+  /** What to generate this turn (e.g. "cover_letter" via /cover); defaults to "cv". */
   kind?: GenerationKind;
 };
 
@@ -40,7 +40,6 @@ export type SessionStatus = "idle" | "pending" | "running" | "failed";
 export type SessionSummary = {
   id: string;
   title: string | null;
-  kind: GenerationKind;
   message_count: number;
   page_count: number;
   status: SessionStatus;
@@ -50,7 +49,6 @@ export type SessionSummary = {
 
 export type LoadConversationResponse = {
   title: string | null;
-  kind: GenerationKind;
   status: SessionStatus;
   error: string | null;
   page_count: number;

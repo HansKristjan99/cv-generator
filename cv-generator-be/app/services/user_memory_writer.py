@@ -7,6 +7,7 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import MAX_MEMORY_NOTE_CHARS
 from app.models import (
     Award,
     EducationExperience,
@@ -85,7 +86,7 @@ def save_new_user_data(db: Session, user: User, data: NewUserData | None) -> Non
                 changed = True
                 inserted_awards += 1
         for item in data.notes:
-            if item.content.strip() and len(item.content) <= 600:
+            if item.content.strip() and len(item.content) <= MAX_MEMORY_NOTE_CHARS:
                 db.add(MemoryNote(user_id=user.id, content=item.content))
                 changed = True
                 inserted_notes += 1

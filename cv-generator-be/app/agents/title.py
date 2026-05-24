@@ -6,6 +6,11 @@ import logging
 
 from pydantic import BaseModel
 
+from app.config import (
+    SESSION_TITLE_JOB_DESCRIPTION_CHARS,
+    SESSION_TITLE_MAX_CHARS,
+    SESSION_TITLE_USER_MESSAGE_CHARS,
+)
 from app.services.openai_client import OpenAIClient
 
 logger = logging.getLogger(__name__)
@@ -31,8 +36,8 @@ class SessionTitleAgent:
         if not job_description:
             return None
         prompt = (
-            f"Job description:\n{job_description[:1200]}\n\n"
-            f"User's first message:\n{user_message[:300] or '(none)'}"
+            f"Job description:\n{job_description[:SESSION_TITLE_JOB_DESCRIPTION_CHARS]}\n\n"
+            f"User's first message:\n{user_message[:SESSION_TITLE_USER_MESSAGE_CHARS] or '(none)'}"
         )
         try:
             result, _ = self.client.get_structured_output(
@@ -43,4 +48,4 @@ class SessionTitleAgent:
             return None
         if not result or not result.title:
             return None
-        return result.title.strip().strip('"').strip("'")[:80]
+        return result.title.strip().strip('"').strip("'")[:SESSION_TITLE_MAX_CHARS]
