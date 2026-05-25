@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/react";
-
+import { useSearchParams } from "react-router";
 import { ConversationPage } from "../pages/conversationPage";
 import { CvGeneratorPage } from "../pages/cvGeneratorPage";
 import { TemplatesPage } from "../pages/templatesPage";
@@ -10,17 +10,33 @@ import { AuthenticatedApiProvider } from "../routes/authenticatedApiProvider";
 import { RecentChats } from "./recentChats";
 import { cx } from "../utils/cx";
 import styles from "./appShell.module.css";
+import { SubscriptionPage } from "../pages/subscriptionPage";
 
-type AppTab = "cv" | "templates" | "user memory" | "session";
+type AppTab = "cv" | "templates" | "user memory" | "session" | "subscription";
 
 const tabs: Array<{ id: AppTab; label: string }> = [
   { id: "cv", label: "New CV" },
   { id: "templates", label: "Templates" },
   { id: "user memory", label: "Memory" },
+  { id: "subscription", label: "Subscription" },
 ];
 
+function isAppTab(value: string | null): value is AppTab {
+  return (
+    value === "cv"
+    || value === "templates"
+    || value === "user memory"
+    || value === "session"
+    || value === "subscription"
+  );
+}
+
 export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
-  const [activeTab, setActiveTab] = useState<AppTab>(initialTab);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<AppTab>(
+    isAppTab(tabParam) ? tabParam : initialTab,
+  );
   const { isLoaded, isSignedIn } = useAuth();
   const activeSessionId = useAppSelector((s) => s.cvGeneration.activeSessionId);
   const setupStatus = useAppSelector((s) => s.cvGeneration.setupStatus);
@@ -35,6 +51,10 @@ export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
 
   const handleTabClick = (tabId: AppTab) => {
     setActiveTab(tabId);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("tab", tabId);
+    nextParams.delete("checkout_session_id");
+    setSearchParams(nextParams);
   };
 
   const showConversation = isSignedIn && activeTab === "session" && Boolean(activeSessionId);
@@ -122,6 +142,10 @@ function renderAuthenticatedTab(activeTab: AppTab) {
     return <UserMemoryPage />;
   }
 
+  if (activeTab === "subscription") {
+    return <SubscriptionPage />;
+  }
+
   return <CvGeneratorPage />;
 }
 
@@ -138,6 +162,14 @@ function renderTab(activeTab: AppTab, isLoaded: boolean, isSignedIn: boolean | u
     return (
       <AuthenticatedTab title="Memory" isLoaded={isLoaded} isSignedIn={isSignedIn}>
         <UserMemoryPage />
+      </AuthenticatedTab>
+    );
+  }
+
+  if (activeTab === "subscription") {
+    return (
+      <AuthenticatedTab title="Subscription" isLoaded={isLoaded} isSignedIn={isSignedIn}>
+        <SubscriptionPage />
       </AuthenticatedTab>
     );
   }

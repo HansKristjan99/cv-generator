@@ -6,13 +6,17 @@ export function setAuthTokenProvider(provider: TokenProvider | null) {
   tokenProvider = provider;
 }
 
-// In production VITE_API_BASE_URL is the ALB URL (e.g. http://my-alb.amazonaws.com).
-// In local dev it is empty and the Vite proxy handles /api/* instead.
+// VITE_API_BASE_URL is required in every environment. It points at the FastAPI
+// backend directly; there is no Vite or Cloudflare /api proxy.
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
 
 function resolveUrl(input: RequestInfo | URL): RequestInfo | URL {
-  if (!API_BASE || typeof input !== "string") return input;
-  return API_BASE.replace(/\/$/, "") + input.replace(/^\/api/, "");
+  if (typeof input !== "string" || /^https?:\/\//.test(input)) return input;
+  const path = input.startsWith("/") ? input : `/${input}`;
+  if (!API_BASE) {
+    throw new Error("VITE_API_BASE_URL is not configured");
+  }
+  return API_BASE.replace(/\/$/, "") + path;
 }
 
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {

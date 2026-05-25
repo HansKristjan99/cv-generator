@@ -87,7 +87,7 @@ export type UserMemoryPatch = {
 };
 
 export async function getUserMemory(): Promise<UserMemory> {
-  const response = await authFetch("/api/users/memory");
+  const response = await authFetch("/users/memory");
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response));
@@ -97,7 +97,7 @@ export async function getUserMemory(): Promise<UserMemory> {
 }
 
 export async function updateUserMemory(patch: UserMemoryPatch): Promise<UserMemory> {
-  const response = await authFetch("/api/users/memory", {
+  const response = await authFetch("/users/memory", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),

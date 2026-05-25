@@ -4,7 +4,7 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import cv, cv_edit, cv_invent, cv_sessions, memory, templates, users
+from app.api import cv, cv_edit, cv_invent, cv_sessions, memory, templates, users, billing
 from app.config import LOG_FORMAT, settings
 
 
@@ -43,6 +43,7 @@ app.include_router(cv_invent.router)
 app.include_router(memory.router)
 app.include_router(templates.router)
 app.include_router(users.router)
+app.include_router(billing.router)
 
 
 @app.middleware("http")

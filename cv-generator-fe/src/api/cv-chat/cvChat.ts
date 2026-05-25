@@ -28,7 +28,7 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Star
     }
   }
 
-  const response = await authFetch("/api/cv/generate/", { method: "POST", body: formData });
+  const response = await authFetch("/cv/generate/", { method: "POST", body: formData });
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response));
@@ -38,13 +38,13 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Star
 }
 
 export async function getChatSessions(): Promise<SessionSummary[]> {
-  const response = await authFetch("/api/cv/sessions/");
+  const response = await authFetch("/cv/sessions/");
   if (!response.ok) throw new Error(await readErrorMessage(response));
   return (await response.json()) as SessionSummary[];
 }
 
 export async function getChatHistory(sessionId: string): Promise<LoadConversationResponse> {
-  const response = await authFetch(`/api/cv/sessions/${sessionId}/messages`);
+  const response = await authFetch(`/cv/sessions/${sessionId}/messages`);
   if (!response.ok) throw new Error(await readErrorMessage(response));
   return (await response.json()) as LoadConversationResponse;
 }

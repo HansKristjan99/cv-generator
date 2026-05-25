@@ -7,7 +7,7 @@ export type CurrentUser = {
 };
 
 export async function registerCurrentUser(): Promise<CurrentUser> {
-  const response = await authFetch("/api/users/me", { method: "POST" });
+  const response = await authFetch("/users/me", { method: "POST" });
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response));

@@ -5,7 +5,7 @@ export type UserSettings = {
 };
 
 export async function getUserSettings(): Promise<UserSettings> {
-  const response = await authFetch("/api/users/settings");
+  const response = await authFetch("/users/settings");
   if (!response.ok) {
     throw new Error(await readErrorMessage(response));
   }
@@ -13,7 +13,7 @@ export async function getUserSettings(): Promise<UserSettings> {
 }
 
 export async function updateUserSettings(settings: UserSettings): Promise<UserSettings> {
-  const response = await authFetch("/api/users/settings", {
+  const response = await authFetch("/users/settings", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(settings),

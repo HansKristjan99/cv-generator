@@ -20,6 +20,7 @@ from app.db import get_db
 from app.models import CvSession, Message
 from app.schemas import QuestionToImproveCv
 from app.services.auth import CurrentUser
+from app.services.subscriptions import has_paid_access
 
 router = APIRouter(prefix="/cv", tags=["cv"])
 
@@ -162,6 +163,7 @@ class CvQuota(BaseModel):
 
 @router.get("/quota", response_model=CvQuota)
 def get_quota(user: CurrentUser, db: Annotated[Session, Depends(get_db)]) -> dict:
+    paid_access = has_paid_access(db, user)
     month = _month_start()
     sessions_used = db.scalar(
         select(func.count(CvSession.id)).where(
@@ -175,9 +177,9 @@ def get_quota(user: CurrentUser, db: Annotated[Session, Depends(get_db)]) -> dic
     ) or 0
     return {
         "sessions_used": sessions_used,
-        "sessions_limit": None if user.is_unlimited else MAX_SESSIONS_PER_MONTH,
-        "messages_limit": None if user.is_unlimited else MAX_MESSAGES_PER_SESSION,
+        "sessions_limit": None if paid_access else MAX_SESSIONS_PER_MONTH,
+        "messages_limit": None if paid_access else MAX_MESSAGES_PER_SESSION,
         "invents_used": invents_used,
-        "invents_limit": None if user.is_unlimited else MAX_INVENTS_PER_MONTH,
-        "is_unlimited": user.is_unlimited,
+        "invents_limit": None if paid_access else MAX_INVENTS_PER_MONTH,
+        "is_unlimited": paid_access,
     }
