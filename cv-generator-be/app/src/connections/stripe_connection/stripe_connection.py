@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any
 from uuid import UUID
@@ -109,3 +111,61 @@ def stripe_id(obj: Any) -> str | None:
 
 def subscription_is_active(status: str | None) -> bool:
     return status in ACTIVE_SUBSCRIPTION_STATUSES
+
+
+@dataclass(frozen=True)
+class StripeSubscriptionData:
+    """The subset of a Stripe subscription the app persists, normalized out of
+    the raw Stripe object (or webhook dict) so callers never poke at its shape."""
+
+    id: str
+    customer_id: str
+    status: str
+    subscription_type: str
+    price_id: str | None
+    current_period_end: datetime | None
+    user_id: str | None
+
+
+def _timestamp(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    try:
+        return datetime.fromtimestamp(int(value), tz=UTC)
+    except (TypeError, ValueError, OSError):
+        return None
+
+
+def _metadata_value(obj: Any, key: str) -> str | None:
+    metadata = stripe_value(obj, "metadata")
+    if isinstance(metadata, dict):
+        value = metadata.get(key)
+        return value if isinstance(value, str) and value else None
+    return None
+
+
+def parse_subscription(obj: Any) -> StripeSubscriptionData | None:
+    """Normalize a Stripe subscription object into StripeSubscriptionData.
+
+    Returns None when the payload is missing the fields the app requires.
+    """
+    subscription_id = stripe_id(obj)
+    customer_id = stripe_id(stripe_value(obj, "customer"))
+    status = stripe_value(obj, "status")
+    if not subscription_id or not customer_id or not isinstance(status, str):
+        return None
+
+    item_data = stripe_value(stripe_value(obj, "items"), "data") or []
+    item = item_data[0] if item_data else None
+    return StripeSubscriptionData(
+        id=subscription_id,
+        customer_id=customer_id,
+        status=status,
+        subscription_type=_metadata_value(obj, "subscription_type") or SUBSCRIPTION_TYPE_PRO,
+        price_id=stripe_id(stripe_value(item, "price")),
+        current_period_end=_timestamp(
+            stripe_value(obj, "current_period_end")
+            or stripe_value(item, "current_period_end")
+        ),
+        user_id=_metadata_value(obj, "user_id"),
+    )

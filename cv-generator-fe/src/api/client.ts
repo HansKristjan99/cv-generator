@@ -11,7 +11,7 @@ import {
   createCheckoutSession,
   getCheckoutSessionStatus,
   getSubscription,
-} from "./billing/createCheckoutSession";
+} from "./billing/billing";
 
 export const apiClient = {
   registerCurrentUser,

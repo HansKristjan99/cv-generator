@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -16,10 +16,12 @@ from app.models import Subscription, User
 from app.services.auth import CurrentUser
 from app.src.connections.stripe_connection.stripe_connection import (
     StripeConfigurationError,
+    StripeSubscriptionData,
     create_checkout_session,
     create_customer,
     create_portal_session,
     construct_webhook_event,
+    parse_subscription,
     retrieve_checkout_session,
     retrieve_subscription,
     stripe_id,
@@ -85,42 +87,6 @@ def _subscription_response(subscription: Subscription | None) -> SubscriptionRes
     )
 
 
-def _timestamp(value: Any) -> datetime | None:
-    if value is None:
-        return None
-    try:
-        return datetime.fromtimestamp(int(value), tz=UTC)
-    except (TypeError, ValueError, OSError):
-        return None
-
-
-def _metadata_value(obj: Any, key: str) -> str | None:
-    metadata = stripe_value(obj, "metadata") or {}
-    if isinstance(metadata, dict):
-        value = metadata.get(key)
-        return value if isinstance(value, str) and value else None
-    return None
-
-
-def _first_subscription_item(subscription: Any) -> Any | None:
-    items = stripe_value(subscription, "items")
-    data = stripe_value(items, "data") or []
-    return data[0] if data else None
-
-
-def _subscription_price_id(subscription: Any) -> str | None:
-    item = _first_subscription_item(subscription)
-    return stripe_id(stripe_value(item, "price"))
-
-
-def _subscription_period_end(subscription: Any) -> datetime | None:
-    item = _first_subscription_item(subscription)
-    return _timestamp(
-        stripe_value(subscription, "current_period_end")
-        or stripe_value(item, "current_period_end")
-    )
-
-
 def _ensure_stripe_customer(user: User, db: Session) -> str:
     if user.stripe_customer_id:
         return user.stripe_customer_id
@@ -137,67 +103,51 @@ def _ensure_stripe_customer(user: User, db: Session) -> str:
     return customer_id
 
 
-def _user_for_subscription(db: Session, subscription: Any) -> User | None:
-    raw_user_id = _metadata_value(subscription, "user_id")
-    if raw_user_id:
+def _user_for_subscription(db: Session, data: StripeSubscriptionData) -> User | None:
+    if data.user_id:
         try:
-            user = db.get(User, UUID(raw_user_id))
+            user = db.get(User, UUID(data.user_id))
             if user is not None:
                 return user
         except ValueError:
-            logger.warning("Stripe subscription has invalid user_id metadata: %s", raw_user_id)
+            logger.warning("Stripe subscription has invalid user_id metadata: %s", data.user_id)
 
-    customer_id = stripe_id(stripe_value(subscription, "customer"))
-    if not customer_id:
-        return None
-    return db.scalar(select(User).where(User.stripe_customer_id == customer_id))
+    return db.scalar(select(User).where(User.stripe_customer_id == data.customer_id))
 
 
 def _sync_subscription_from_stripe(db: Session, stripe_subscription: Any) -> Subscription | None:
-    subscription_id = stripe_id(stripe_subscription)
-    customer_id = stripe_id(stripe_value(stripe_subscription, "customer"))
-    status = stripe_value(stripe_subscription, "status")
-    if not subscription_id or not customer_id or not isinstance(status, str):
+    data = parse_subscription(stripe_subscription)
+    if data is None:
         logger.warning("Skipping incomplete Stripe subscription payload")
         return None
 
-    user = _user_for_subscription(db, stripe_subscription)
+    user = _user_for_subscription(db, data)
     if user is None:
         logger.warning(
             "Skipping Stripe subscription %s because no app user matches customer %s",
-            subscription_id,
-            customer_id,
+            data.id,
+            data.customer_id,
         )
         return None
     if not user.stripe_customer_id:
-        user.stripe_customer_id = customer_id
+        user.stripe_customer_id = data.customer_id
 
-    subscription_type = _metadata_value(stripe_subscription, "subscription_type") or "pro"
     row = db.scalar(
-        select(Subscription).where(
-            Subscription.stripe_subscription_id == subscription_id
-        )
+        select(Subscription).where(Subscription.stripe_subscription_id == data.id)
     )
     if row is None:
-        row = Subscription(
-            user_id=user.id,
-            stripe_subscription_id=subscription_id,
-            stripe_customer_id=customer_id,
-            subscription_type=subscription_type,
-            status=status,
-            active=subscription_is_active(status),
-        )
+        row = Subscription(stripe_subscription_id=data.id)
+        db.add(row)
 
     row.user_id = user.id
-    row.stripe_customer_id = customer_id
-    row.subscription_type = subscription_type
-    row.status = status
-    row.active = subscription_is_active(status)
-    row.stripe_price_id = _subscription_price_id(stripe_subscription)
-    row.current_period_end = _subscription_period_end(stripe_subscription)
+    row.stripe_customer_id = data.customer_id
+    row.subscription_type = data.subscription_type
+    row.status = data.status
+    row.active = subscription_is_active(data.status)
+    row.stripe_price_id = data.price_id
+    row.current_period_end = data.current_period_end
 
     db.add(user)
-    db.add(row)
     db.commit()
     db.refresh(row)
     return row
