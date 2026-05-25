@@ -32,6 +32,7 @@ from app.db import get_db
 from app.models import CvSession, Message, Template, User
 from app.services.auth import ensure_current_user
 from app.services.generation_pipeline import run_pipeline
+from app.services.subscriptions import has_paid_access
 from app.services.user_data import format_user_data
 
 router = APIRouter(prefix="/cv", tags=["cv"])
@@ -44,7 +45,7 @@ def _month_start() -> datetime:
 
 
 def _check_session_available(user: User, db: Session) -> None:
-    if user.is_unlimited:
+    if has_paid_access(db, user):
         return
     count = db.scalar(
         select(func.count(CvSession.id)).where(
@@ -209,7 +210,7 @@ async def generate_cv(
         cv_session = _get_session(session_id, current_user.id, db)
         if cv_session.status in {"pending", "running"}:
             raise HTTPException(409, "Conversation is still generating.")
-        if not current_user.is_unlimited and cv_session.message_count >= MAX_MESSAGES_PER_SESSION:
+        if not has_paid_access(db, current_user) and cv_session.message_count >= MAX_MESSAGES_PER_SESSION:
             raise HTTPException(429, f"Conversation limit of {MAX_MESSAGES_PER_SESSION} messages reached.")
 
         assistant_msgs = db.scalars(

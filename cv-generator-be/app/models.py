@@ -32,6 +32,7 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     idp_sub: Mapped[str] = mapped_column(Text, nullable=False)
     email: Mapped[str] = mapped_column(Text, nullable=False)
+    stripe_customer_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     preferred_template_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("templates.id", ondelete="SET NULL"), nullable=True
     )
@@ -45,6 +46,7 @@ class User(Base):
     __table_args__ = (
         UniqueConstraint("idp_sub", name="uq_users_idp_sub"),
         UniqueConstraint("email", name="uq_users_email"),
+        UniqueConstraint("stripe_customer_id", name="uq_users_stripe_customer_id"),
     )
 
 
@@ -175,6 +177,36 @@ class Message(Base):
     )
 
     __table_args__ = (Index("ix_messages_cv_session_id", "cv_session_id"),)
+
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    subscription_type: Mapped[str] = mapped_column(Text, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    status: Mapped[str] = mapped_column(Text, nullable=False)
+    stripe_customer_id: Mapped[str] = mapped_column(Text, nullable=False)
+    stripe_subscription_id: Mapped[str] = mapped_column(Text, nullable=False)
+    stripe_price_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("stripe_subscription_id", name="uq_subscriptions_stripe_subscription_id"),
+        Index("ix_subscriptions_user_id", "user_id"),
+    )
 
 
 class MemoryNote(Base):

@@ -3,7 +3,8 @@ main = "worker.js"
 compatibility_date = "2026-05-19"
 
 # Serve the Vite build output as static assets.
-# The worker script handles /api/* proxying and SPA fallback.
+# API calls go directly to VITE_API_BASE_URL. The worker adds security headers
+# and SPA fallback for client-side routes; it does not proxy API traffic.
 [assets]
 directory = "./dist"
 binding = "ASSETS"

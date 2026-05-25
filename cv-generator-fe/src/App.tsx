@@ -5,9 +5,8 @@ import { AppShell } from "./components/appShell";
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<AppShell />} />
       <Route path="/app" element={<AppShell initialTab="cv" />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
   );
 }

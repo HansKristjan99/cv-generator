@@ -2,7 +2,9 @@ from pathlib import Path
 
 from aws_cdk import (
     CfnOutput,
+    CfnParameter,
     Duration,
+    Fn,
     RemovalPolicy,
     SecretValue,
     Stack,
@@ -22,6 +24,20 @@ class CvGeneratorBeStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         repo_root = Path(__file__).resolve().parents[2]
+        frontend_url = CfnParameter(
+            self,
+            "FrontendUrl",
+            type="String",
+            default="https://hireable.vericodehq.com",
+            description="Canonical frontend URL used for Stripe return URLs and Clerk authorized parties.",
+        )
+        stripe_pro_price_id = CfnParameter(
+            self,
+            "StripeProPriceId",
+            type="String",
+            allowed_pattern="^price_.+",
+            description="Stripe live recurring Price ID for the Pro subscription.",
+        )
 
         vpc = ec2.Vpc(
             self,
@@ -122,6 +138,22 @@ class CvGeneratorBeStack(Stack):
             secret_string_value=SecretValue.unsafe_plain_text("PLACEHOLDER"),
             removal_policy=RemovalPolicy.RETAIN,
         )
+        stripe_secret_key = secretsmanager.Secret(
+            self,
+            "StripeSecretKey",
+            secret_name="cv-generator/stripe-secret-key",
+            description="Stripe secret key — replace PLACEHOLDER before billing is enabled",
+            secret_string_value=SecretValue.unsafe_plain_text("PLACEHOLDER"),
+            removal_policy=RemovalPolicy.RETAIN,
+        )
+        stripe_webhook_secret = secretsmanager.Secret(
+            self,
+            "StripeWebhookSecret",
+            secret_name="cv-generator/stripe-webhook-secret",
+            description="Stripe webhook signing secret — replace PLACEHOLDER before billing is enabled",
+            secret_string_value=SecretValue.unsafe_plain_text("PLACEHOLDER"),
+            removal_policy=RemovalPolicy.RETAIN,
+        )
 
         cluster = ecs.Cluster(
             self,
@@ -171,7 +203,12 @@ class CvGeneratorBeStack(Stack):
                     # Comma-separated list of allowed CORS / Clerk origins.
                     # Add your Cloudflare Pages URL here, e.g.:
                     #   "https://cv-generator.pages.dev,http://localhost:5173"
-                    "CLERK_AUTHORIZED_PARTIES": "http://localhost:5173, https://hireable.vericodehq.com",
+                    "CLERK_AUTHORIZED_PARTIES": Fn.join(
+                        ",",
+                        ["http://localhost:5173", frontend_url.value_as_string],
+                    ),
+                    "FRONTEND_URL": frontend_url.value_as_string,
+                    "STRIPE_PRO_PRICE_ID": stripe_pro_price_id.value_as_string,
                 },
                 secrets={
                     "DB_PASSWORD": ecs.Secret.from_secrets_manager(
@@ -182,6 +219,8 @@ class CvGeneratorBeStack(Stack):
                     ),
                     "CLERK_JWT_KEY": ecs.Secret.from_secrets_manager(clerk_jwt_key),
                     "OPENAI_API_KEY": ecs.Secret.from_secrets_manager(openai_api_key),
+                    "STRIPE_SECRET_KEY": ecs.Secret.from_secrets_manager(stripe_secret_key),
+                    "STRIPE_WEBHOOK_SECRET": ecs.Secret.from_secrets_manager(stripe_webhook_secret),
                 },
                 log_driver=ecs.LogDrivers.aws_logs(
                     stream_prefix="fastapi",

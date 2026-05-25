@@ -6,7 +6,7 @@ export async function manualEditCv(
   kind: "cv" | "cover_letter",
   data: CvStructuredData | ClStructuredData,
 ): Promise<ManualEditResponse> {
-  const response = await authFetch(`/api/cv/sessions/${sessionId}/edit`, {
+  const response = await authFetch(`/cv/sessions/${sessionId}/edit`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ kind, data }),

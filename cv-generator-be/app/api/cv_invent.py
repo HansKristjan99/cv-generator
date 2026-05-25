@@ -22,6 +22,7 @@ from app.models import CvSession, User
 from app.schemas import QuestionToImproveCv
 from app.services.auth import CurrentUser
 from app.services.openai_client import OpenAIClient
+from app.services.subscriptions import has_paid_access
 from app.services.user_data import format_user_data
 
 router = APIRouter(prefix="/cv", tags=["cv"])
@@ -34,7 +35,7 @@ def _month_start() -> datetime:
 
 
 def _check_invent_available(user: User, db: Session) -> None:
-    if user.is_unlimited:
+    if has_paid_access(db, user):
         return
     total = db.scalar(
         select(func.sum(CvSession.invent_count)).where(

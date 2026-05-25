@@ -72,6 +72,11 @@ class Settings(BaseSettings):
     clerk_secret_key: str | None = None
     clerk_jwt_key: str | None = None
     clerk_authorized_parties: Annotated[list[str], NoDecode] = Field(default_factory=list)
+    frontend_url: str = "http://localhost:5173"
+
+    stripe_secret_key: str | None = None
+    stripe_webhook_secret: str | None = None
+    stripe_pro_price_id: str | None = None
 
     @model_validator(mode="after")
     def ensure_database_url(self) -> "Settings":

@@ -6,6 +6,12 @@ import { getCvQuota } from "./cv-chat/quota";
 import { getUserMemory, updateUserMemory } from "./user-memory/userMemory";
 import { getTemplates } from "./templates/getTemplates";
 import { getUserSettings, updateUserSettings } from "./user-settings/userSettings";
+import {
+  createBillingPortalSession,
+  createCheckoutSession,
+  getCheckoutSessionStatus,
+  getSubscription,
+} from "./billing/createCheckoutSession";
 
 export const apiClient = {
   registerCurrentUser,
@@ -20,6 +26,10 @@ export const apiClient = {
   getTemplates,
   getUserSettings,
   updateUserSettings,
+  createBillingPortalSession,
+  createCheckoutSession,
+  getCheckoutSessionStatus,
+  getSubscription,
 };
 
 export type ApiClient = typeof apiClient;

@@ -10,7 +10,7 @@ export type CvQuota = {
 };
 
 export async function getCvQuota(): Promise<CvQuota> {
-  const response = await authFetch("/api/cv/quota");
+  const response = await authFetch("/cv/quota");
   if (!response.ok) throw new Error(await readErrorMessage(response));
   return (await response.json()) as CvQuota;
 }

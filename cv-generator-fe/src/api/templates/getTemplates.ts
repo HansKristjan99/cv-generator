@@ -7,7 +7,7 @@ export type Template = {
 };
 
 export async function getTemplates(): Promise<Template[]> {
-  const response = await authFetch("/api/templates/");
+  const response = await authFetch("/templates/");
   if (!response.ok) {
     throw new Error(await readErrorMessage(response));
   }
