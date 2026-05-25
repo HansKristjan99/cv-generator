@@ -18,7 +18,7 @@ const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : 
 
 // Optional human-readable price (e.g. "$12 / month"). Stripe owns the real
 // amount; when unset we point the user to the secure checkout instead.
-const proPriceLabel = import.meta.env.VITE_STRIPE_PRICE_LABEL as string | undefined;
+const proPriceLabel = "20€/ month ";
 
 const FREE_FEATURES = [
   "3 CV generations per month",
@@ -225,12 +225,12 @@ export function SubscriptionPage() {
           <article className={styles.plan}>
             <div className={styles.planHead}>
               <div className={styles.planTopRow}>
-                <h2 className={styles.planName}>Free</h2>
+                <h2 className={styles.planName}>Standard</h2>
                 {!isActive ? <span className={styles.planBadgeNeutral}>Current plan</span> : null}
               </div>
               <div className={styles.priceRow}>
                 <span className={styles.price}>Free</span>
-                <span className={styles.priceUnit}>forever</span>
+                {/* <span className={styles.priceUnit}></span> */}
               </div>
               <p className={styles.planDesc}>Everything you need to try Hireable and ship a polished CV.</p>
             </div>
