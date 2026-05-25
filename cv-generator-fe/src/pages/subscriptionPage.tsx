@@ -11,8 +11,6 @@ import {
   type SubscriptionState,
 } from "../api/billing/billing";
 import { cx } from "../utils/cx";
-} from "../api/billing/billing";
-import { cx } from "../utils/cx";
 import styles from "./subscriptionPage.module.css";
 
 const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
@@ -35,27 +33,6 @@ const PRO_FEATURES = [
 ];
 
 type LoadState = "loading" | "ready" | "error";
-
-function formatDate(iso: string | null): string | null {
-  if (!iso) return null;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path
-        d="M5 10.5l3.2 3.2L15 7"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -165,11 +142,6 @@ export function SubscriptionPage() {
     setCheckoutSessionId(null);
   };
 
-  const cancelCheckout = () => {
-    setClientSecret(null);
-    setCheckoutSessionId(null);
-  };
-
   const openPortal = async () => {
     setIsOpeningPortal(true);
     setError(null);
@@ -198,23 +170,11 @@ export function SubscriptionPage() {
   const isActive = Boolean(subscription?.active);
   const isCheckoutOpen = Boolean(clientSecret && stripePromise);
   const renewalDate = formatDate(subscription?.current_period_end ?? null);
-  const isCheckoutOpen = Boolean(clientSecret && stripePromise);
-  const renewalDate = formatDate(subscription?.current_period_end ?? null);
 
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-    <main className={styles.page}>
-      <header className={styles.header}>
         <div>
-          <div className={styles.breadcrumb}>
-            <span>Workspace</span>
-            <span className={styles.breadcrumbSep}>/</span>
-            <span className={styles.breadcrumbActive}>Subscription</span>
-          </div>
-          <h1 className={styles.title}>Subscription</h1>
-          <p className={styles.subtitle}>
-            Upgrade to Pro for unlimited CV generation, refinements, and AI suggestions.
           <div className={styles.breadcrumb}>
             <span>Workspace</span>
             <span className={styles.breadcrumbSep}>/</span>
