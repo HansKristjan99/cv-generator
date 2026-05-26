@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from "react-router";
 
-import { AppShell } from "./components/appShell";
+import { AppShell } from "./app/appShell";
 
 function App() {
   return (
