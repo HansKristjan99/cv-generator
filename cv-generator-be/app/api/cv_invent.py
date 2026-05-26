@@ -79,18 +79,22 @@ def invent_cv(
     )
     if cv_session is None:
         raise HTTPException(404, "Unknown or expired conversation.")
-    if cv_session.conversation_id.startswith("pending-"):
-        raise HTTPException(409, "Conversation is not ready for enhancement.")
     if not cv_session.job_description:
         raise HTTPException(409, "This conversation does not have a stored job description.")
     _check_invent_available(current_user, db)
 
     client = OpenAIClient(MODEL)
-    try:
-        transcript = client.get_conversation_transcript(cv_session.conversation_id)
-    except openai.NotFoundError as exc:
-        logger.warning("invent_cv could not read conversation %s: %s", cv_session.conversation_id, exc)
-        raise HTTPException(404, "Unknown or expired conversation.") from exc
+    # The requirements gate asks clarifying questions before any writer run, so the
+    # session's conversation_id is still the local "pending-" placeholder — there is no
+    # OpenAI conversation to fetch yet. Invent can proceed without a transcript.
+    if cv_session.conversation_id.startswith("pending-"):
+        transcript = ""
+    else:
+        try:
+            transcript = client.get_conversation_transcript(cv_session.conversation_id)
+        except openai.NotFoundError as exc:
+            logger.warning("invent_cv could not read conversation %s: %s", cv_session.conversation_id, exc)
+            raise HTTPException(404, "Unknown or expired conversation.") from exc
 
     user_memory = format_user_data(db, current_user.id)
     cv_session.invent_count += 1
