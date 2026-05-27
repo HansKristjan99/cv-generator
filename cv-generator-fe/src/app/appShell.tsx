@@ -1,16 +1,16 @@
 import { AppScaffold } from "./appScaffold";
 import { AuthenticationProvider } from "./authenticationProvider";
 import { TabSwitcher } from "./tabSwitcher";
-import { useActiveTab } from "./hooks/useActiveTab";
+import { useAppLocation } from "./hooks/useAppLocation";
 import type { AppTab } from "./tabs";
 
 export function AppShell({ initialTab = "cv" }: { initialTab?: AppTab }) {
-  const { activeTab, selectTab, openSession } = useActiveTab(initialTab);
+  const { activeTab, activeSessionId, selectTab } = useAppLocation(initialTab);
 
   return (
-    <AppScaffold activeTab={activeTab} onSelectTab={selectTab} onOpenSession={openSession}>
+    <AppScaffold activeTab={activeTab} onSelectTab={selectTab}>
       <AuthenticationProvider>
-        <TabSwitcher activeTab={activeTab} />
+        <TabSwitcher activeTab={activeTab} activeSessionId={activeSessionId} />
       </AuthenticationProvider>
     </AppScaffold>
   );

@@ -10,10 +10,9 @@ import { TabNav } from "./tabNav";
 type Props = {
   activeTab: AppTab;
   onSelectTab: (tab: AppTab) => void;
-  onOpenSession: () => void;
 };
 
-export function Sidebar({ activeTab, onSelectTab, onOpenSession }: Props) {
+export function Sidebar({ activeTab, onSelectTab }: Props) {
   const { isSignedIn } = useAuth();
 
   return (
@@ -22,7 +21,7 @@ export function Sidebar({ activeTab, onSelectTab, onOpenSession }: Props) {
       <TabNav activeTab={activeTab} onSelect={onSelectTab} />
       {isSignedIn ? (
         <div className={styles.recentChats}>
-          <RecentChats onOpenSession={onOpenSession} />
+          <RecentChats />
         </div>
       ) : null}
       <div className={styles.footerArea}>
