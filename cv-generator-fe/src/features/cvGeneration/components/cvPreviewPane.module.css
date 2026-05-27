@@ -1,0 +1,170 @@
+.pane {
+  composes: card from "../../../primitives/primitives.module.css";
+  display: flex;
+  flex-direction: column;
+  height: var(--pane-height);
+  overflow: hidden;
+}
+
+.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  height: 100vh;
+  width: 100vw;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.header {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px 0 0;
+  border-bottom: 1px solid var(--color-rule-soft);
+  min-height: 46px;
+}
+
+.tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-muted-deep);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+  cursor: pointer;
+}
+
+.tab:hover:not(:disabled) {
+  color: var(--color-ink);
+  background: var(--color-bg-alt);
+}
+
+.tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tabActive {
+  color: var(--color-primary-deep);
+  border-bottom-color: var(--color-primary);
+  background: transparent;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-rule);
+  background: transparent;
+  color: var(--color-muted-deep);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  line-height: 1;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.actionButton:hover {
+  background: var(--color-bg-alt);
+  border-color: var(--color-panel-rule);
+  color: var(--color-ink);
+}
+
+.editBtn {
+  composes: actionButton;
+}
+
+.control {
+  composes: actionButton;
+  width: 30px;
+  font-size: 0.85rem;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  background: var(--color-bg-alt);
+}
+
+.chatView {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card);
+}
+
+.frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: var(--color-bg-alt);
+}
+
+.textBody {
+  flex: 1;
+  overflow: auto;
+  background: var(--color-bg-alt);
+  padding: 22px;
+}
+
+.text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--color-ink);
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.composerSlot {
+  flex-shrink: 0;
+  background: var(--color-card);
+}
+
+.download {
+  composes: actionButton;
+  text-decoration: none;
+}

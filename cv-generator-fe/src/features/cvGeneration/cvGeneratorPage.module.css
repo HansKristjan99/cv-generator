@@ -1,0 +1,154 @@
+.page {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 40px 36px;
+  transition: max-width 0.25s ease;
+}
+
+.pageWide {
+  max-width: min(96vw, 1880px);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.breadcrumbSep {
+  color: var(--color-rule);
+}
+
+.breadcrumbActive {
+  color: var(--color-ink);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.previewBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.previewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  padding: 7px 13px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  color: var(--color-ink);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.previewBtn:hover:not(:disabled) {
+  background: var(--color-bg-alt);
+  border-color: var(--color-panel-rule);
+}
+
+.previewBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.previewBtnActive,
+.previewBtnActive:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  color: var(--color-primary-deep);
+}
+
+.previewTag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  padding: 7px 13px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--color-sky);
+  color: var(--color-sky-ink-deep);
+}
+
+.status {
+  composes: pillMint from "../../primitives/primitives.module.css";
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.reset {
+  composes: btnSecondary from "../../primitives/primitives.module.css";
+  padding: 9px 14px;
+}
+
+.lengthBadge {
+  composes: pillSky from "../../primitives/primitives.module.css";
+}
+
+.sessionStack {
+  width: 100%;
+}
+
+@media (max-width: 1000px) {
+  .page {
+    padding: 28px 24px 40px;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+
+}
