@@ -1,68 +1,67 @@
-import { useState } from "react";
-import { CvChatHeader } from "../cvGeneration/components/cvChatHeader";
-import { CvChatMessageComposer } from "../cvGeneration/components/cvChatMessageComposer";
-import { CvChatMessageList } from "../cvGeneration/components/cvMessageList";
-import { CvPreviewPane } from "../cvGeneration/components/cvPreviewPane";
-import { ManualEditModal } from "../cvGeneration/components/manualEditModal/manualEditModal";
-import {
-  selectActiveConversation,
-  setPreviewSelection,
-} from "../cvGeneration/cvGenerationSlice";
+import { useEffect, useState } from "react";
+
 import { useAppDispatch, useAppSelector } from "../../hooks";
 import type { PreviewKind } from "../../types/chat";
-import styles from "../cvGeneration/cvGeneratorPage.module.css";
+import { CvChatHeader } from "./components/cvChatHeader";
+import { CvChatMessageComposer } from "./components/cvChatMessageComposer";
+import { CvChatMessageList } from "./components/cvMessageList";
+import { CvPreviewPane } from "./components/cvPreviewPane";
+import { ManualEditModal } from "./components/manualEditModal/manualEditModal";
+import {
+  loadConversation,
+  selectActiveConversation,
+  setPreviewSelection,
+} from "./cvGenerationSlice";
+import styles from "./cvGeneratorPage.module.css";
 
-type PreviewDescriptor = {
-  kind: PreviewKind;
-  label: string;
-  badge: string;
-  mode: "pdf" | "text";
-  content: string | null;
-  downloadName?: string;
-};
-
-export function ConversationPage() {
+export function ConversationPage({ sessionId }: { sessionId: string }) {
   const dispatch = useAppDispatch();
   const conv = useAppSelector(selectActiveConversation);
   const { chatSessions, activeSessionId, latestCvStructured, latestClStructured } =
     useAppSelector((s) => s.cvGeneration);
-  const activeSession = chatSessions.find((s) => s.id === activeSessionId);
-  const title = activeSession?.title ?? "Conversation";
-  const previewSelection = conv?.previewSelection ?? null;
   const [editingKind, setEditingKind] = useState<"generated_cv" | "cover_letter" | null>(null);
 
+  useEffect(() => {
+    if (activeSessionId !== sessionId) {
+      void dispatch(loadConversation(sessionId));
+    }
+  }, [activeSessionId, dispatch, sessionId]);
+
+  const activeSession = chatSessions.find((s) => s.id === sessionId);
+  const title = activeSession?.title ?? "Conversation";
+  const previewSelection = conv?.previewSelection ?? null;
   const sourceCvPdf = conv?.sourceCvPdfBase64 ?? null;
   const sourceCvText = conv?.sourceCvText ?? null;
 
-  const descriptors: PreviewDescriptor[] = [
+  const descriptors = [
     {
-      kind: "jd",
+      kind: "jd" as const,
       label: "Job description",
       badge: "JD",
-      mode: "text",
+      mode: "text" as const,
       content: conv?.jobDescription ?? null,
     },
     {
-      kind: "source_cv",
+      kind: "source_cv" as const,
       label: "Submitted CV",
       badge: sourceCvPdf ? "PDF · A4" : "Text",
-      mode: sourceCvPdf ? "pdf" : "text",
+      mode: (sourceCvPdf ? "pdf" : "text") as "pdf" | "text",
       content: sourceCvPdf ?? sourceCvText,
       downloadName: "submitted-cv.pdf",
     },
     {
-      kind: "generated_cv",
+      kind: "generated_cv" as const,
       label: "Generated CV",
       badge: "CV · PDF",
-      mode: "pdf",
+      mode: "pdf" as const,
       content: conv?.latestCvPdfBase64 ?? null,
       downloadName: "cv.pdf",
     },
     {
-      kind: "cover_letter",
+      kind: "cover_letter" as const,
       label: "Cover letter",
       badge: "Letter · PDF",
-      mode: "pdf",
+      mode: "pdf" as const,
       content: conv?.latestCoverLetterPdfBase64 ?? null,
       downloadName: "cover-letter.pdf",
     },
