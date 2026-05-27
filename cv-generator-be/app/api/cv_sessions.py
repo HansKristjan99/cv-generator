@@ -75,6 +75,7 @@ class LoadConversationResponse(BaseModel):
     page_count: int
     messages: list[ChatMessageResponse]
     job_description: str | None
+    job_requirements: dict | None
     source_cv_text: str | None
     source_cv_pdf_base64: str | None
     latest_cv_pdf_base64: str | None
@@ -143,6 +144,7 @@ def get_session_messages(
         page_count=cv_session.page_count,
         messages=messages,
         job_description=cv_session.job_description,
+        job_requirements=cv_session.job_requirements,
         source_cv_text=cv_session.source_cv_text,
         source_cv_pdf_base64=cv_session.source_cv_pdf_base64,
         latest_cv_pdf_base64=latest_cv_pdf_base64,

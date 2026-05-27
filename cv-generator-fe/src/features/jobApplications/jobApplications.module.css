@@ -1,0 +1,412 @@
+.page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 56px 56px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.breadcrumbSep {
+  color: var(--color-rule);
+}
+
+.breadcrumbActive {
+  color: var(--color-ink);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.primaryBtn {
+  composes: btnPrimary from "../../primitives/primitives.module.css";
+  padding: 9px 16px;
+  font-size: 0.84rem;
+}
+
+.secondaryBtn {
+  composes: btnSecondary from "../../primitives/primitives.module.css";
+  padding: 9px 16px;
+  font-size: 0.84rem;
+}
+
+.dangerBtn {
+  composes: btnSecondary from "../../primitives/primitives.module.css";
+  padding: 9px 16px;
+  font-size: 0.84rem;
+  color: var(--color-danger);
+  border-color: var(--color-danger-soft);
+}
+
+.dangerBtn:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+}
+
+.error {
+  margin: 0 0 var(--space-5);
+  padding: 12px 14px;
+  border-radius: var(--radius-input);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
+
+.loadingPanel {
+  composes: card from "../../primitives/primitives.module.css";
+  padding: var(--space-8);
+  color: var(--color-muted);
+}
+
+.emptyPanel {
+  composes: card from "../../primitives/primitives.module.css";
+  padding: var(--space-10) var(--space-8);
+  color: var(--color-muted-deep);
+  text-align: center;
+}
+
+.emptyPanel p {
+  margin: 0 0 var(--space-3);
+}
+
+.emptyHint {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+/* ---- Application grid ---- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.card {
+  composes: card from "../../primitives/primitives.module.css";
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 18px 20px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.card:hover {
+  border-color: var(--color-panel-rule);
+  box-shadow: 0 0 0 3px var(--color-mint), var(--shadow-card);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.05rem;
+  color: var(--color-ink);
+  line-height: 1.2;
+  flex: 1;
+}
+
+.cardDescription {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--color-muted-deep);
+}
+
+.cardTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.tag {
+  composes: chip from "../../primitives/primitives.module.css";
+  font-size: 0.72rem;
+  padding: 3px 9px;
+}
+
+.cardFooter {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+/* ---- Status pills ---- */
+.pillSky {
+  composes: pillSky from "../../primitives/primitives.module.css";
+}
+
+.pillMint {
+  composes: pillMint from "../../primitives/primitives.module.css";
+}
+
+.pillPrimary {
+  composes: pill from "../../primitives/primitives.module.css";
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.pillDanger {
+  composes: pill from "../../primitives/primitives.module.css";
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.pillNeutral {
+  composes: pill from "../../primitives/primitives.module.css";
+  background: var(--color-bg-alt);
+  color: var(--color-muted-deep);
+  border: 1px solid var(--color-rule);
+}
+
+/* ---- Requirements bar ---- */
+.reqBar {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.reqBarCompact {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.reqLabelMust {
+  composes: pillMint from "../../primitives/primitives.module.css";
+  font-size: 0.7rem;
+}
+
+.reqLabelNice {
+  composes: pillSky from "../../primitives/primitives.module.css";
+  font-size: 0.7rem;
+}
+
+/* ---- Modal ---- */
+.modalScrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 24, 18, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  z-index: 1000;
+}
+
+.modal {
+  composes: card from "../../primitives/primitives.module.css";
+  width: min(640px, 100%);
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.modalTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.35rem;
+  color: var(--color-ink);
+}
+
+.modalHint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-muted-deep);
+  line-height: 1.5;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-muted-deep);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.input,
+.textarea {
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.92rem;
+  font-weight: 400;
+  color: var(--color-ink);
+  padding: 10px 12px;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-input);
+  background: var(--color-card);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+.row {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.row .label {
+  min-width: 160px;
+}
+
+.modalActions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* ---- Saved docs modal ---- */
+.docSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.docHeading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--color-ink);
+}
+
+.docEmpty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.docList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.docRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px 12px;
+  border: 1px solid var(--color-rule-soft);
+  border-radius: var(--radius-input);
+  background: var(--color-bg-alt);
+}
+
+.docName {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--color-ink);
+}
+
+.docDate {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+.linkDanger {
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-danger);
+  cursor: pointer;
+  border-radius: var(--radius-input);
+}
+
+.linkDanger:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 28px 24px 40px;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

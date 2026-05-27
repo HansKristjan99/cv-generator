@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { apiClient } from "../../api/client";
+import { useAppLocation } from "../../app/hooks/useAppLocation";
 import { useAppDispatch, useAppSelector } from "../../hooks";
 import type { PreviewKind } from "../../types/chat";
 import { CvChatHeader } from "./components/cvChatHeader";
@@ -16,6 +18,7 @@ import styles from "./cvGeneratorPage.module.css";
 
 export function ConversationPage({ sessionId }: { sessionId: string }) {
   const dispatch = useAppDispatch();
+  const { selectTab } = useAppLocation();
   const conv = useAppSelector(selectActiveConversation);
   const { chatSessions, activeSessionId, latestCvStructured, latestClStructured } =
     useAppSelector((s) => s.cvGeneration);
@@ -32,6 +35,41 @@ export function ConversationPage({ sessionId }: { sessionId: string }) {
   const previewSelection = conv?.previewSelection ?? null;
   const sourceCvPdf = conv?.sourceCvPdfBase64 ?? null;
   const sourceCvText = conv?.sourceCvText ?? null;
+  const hasGeneratedCv = Boolean(conv?.latestCvPdfBase64 ?? conv?.latestCvStructured);
+  const hasCoverLetter = Boolean(
+    conv?.latestCoverLetterPdfBase64 ?? conv?.latestClStructured,
+  );
+  const canAddApplication = hasGeneratedCv || hasCoverLetter || Boolean(conv?.jobDescription);
+
+  const handleSaveCurrent = async (kind: "generated_cv" | "cover_letter") => {
+    const defaultName = title === "Conversation" ? "Untitled" : title;
+    const name = window.prompt(
+      kind === "generated_cv" ? "Name this CV" : "Name this cover letter",
+      kind === "generated_cv" ? `${defaultName} — CV` : `${defaultName} — Cover letter`,
+    );
+    if (!name?.trim()) return;
+    try {
+      if (kind === "generated_cv") {
+        await apiClient.saveCvFromSession(name.trim(), sessionId);
+      } else {
+        await apiClient.saveClFromSession(name.trim(), sessionId);
+      }
+      window.alert("Saved.");
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Save failed.");
+    }
+  };
+
+  const handleAddApplication = async () => {
+    const name = window.prompt("Name this application", title === "Conversation" ? "" : title);
+    if (!name?.trim()) return;
+    try {
+      await apiClient.startApplicationFromSession(sessionId, name.trim());
+      selectTab("applications");
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Could not create application.");
+    }
+  };
 
   const descriptors = [
     {
@@ -86,6 +124,8 @@ export function ConversationPage({ sessionId }: { sessionId: string }) {
           selection={previewSelection}
           onSelect={(kind: PreviewKind | null) => dispatch(setPreviewSelection(kind))}
           onEdit={(kind) => setEditingKind(kind)}
+          onSaveCurrent={handleSaveCurrent}
+          onAddApplication={canAddApplication ? handleAddApplication : undefined}
           chatContent={
             <>
               <CvChatHeader />

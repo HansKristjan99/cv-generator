@@ -18,6 +18,8 @@ type CvPreviewPaneProps = {
   selection: PreviewKind | null;
   onSelect: (kind: PreviewKind | null) => void;
   onEdit?: (kind: "generated_cv" | "cover_letter") => void;
+  onSaveCurrent?: (kind: "generated_cv" | "cover_letter") => void;
+  onAddApplication?: () => void;
   chatContent: ReactNode;
   composer: ReactNode;
 };
@@ -27,6 +29,8 @@ export const CvPreviewPane = ({
   selection,
   onSelect,
   onEdit,
+  onSaveCurrent,
+  onAddApplication,
   chatContent,
   composer,
 }: CvPreviewPaneProps) => {
@@ -94,6 +98,29 @@ export const CvPreviewPane = ({
                 ✎ Edit
               </button>
             )}
+          {active &&
+            onSaveCurrent &&
+            (active.kind === "generated_cv" || active.kind === "cover_letter") &&
+            active.mode === "pdf" && (
+              <button
+                type="button"
+                className={styles.editBtn}
+                onClick={() => onSaveCurrent(active.kind as "generated_cv" | "cover_letter")}
+                title="Save with a custom name for later use"
+              >
+                ☆ Save
+              </button>
+            )}
+          {onAddApplication ? (
+            <button
+              type="button"
+              className={styles.editBtn}
+              onClick={onAddApplication}
+              title="Add to your tracked applications"
+            >
+              + Add application
+            </button>
+          ) : null}
           {active && (
             <button
               type="button"
