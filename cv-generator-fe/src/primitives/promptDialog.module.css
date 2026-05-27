@@ -1,0 +1,72 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 24, 18, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  z-index: 1100;
+}
+
+.dialog {
+  composes: card from "./primitives.module.css";
+  width: min(440px, 100%);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.1rem;
+  color: var(--color-ink);
+}
+
+.input {
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--color-ink);
+  padding: 11px 13px;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-input);
+  background: var(--color-card);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.cancel {
+  composes: btnSecondary from "./primitives.module.css";
+  padding: 8px 14px;
+  font-size: 0.85rem;
+}
+
+.confirm {
+  composes: btnPrimary from "./primitives.module.css";
+  padding: 8px 16px;
+  font-size: 0.85rem;
+}
+
+.confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { apiClient } from "../../api/client";
 import { useAppLocation } from "../../app/hooks/useAppLocation";
 import { useAppDispatch, useAppSelector } from "../../hooks";
+import { PromptDialog } from "../../primitives/promptDialog";
 import type { PreviewKind } from "../../types/chat";
 import { CvChatHeader } from "./components/cvChatHeader";
 import { CvChatMessageComposer } from "./components/cvChatMessageComposer";
@@ -23,6 +24,21 @@ export function ConversationPage({ sessionId }: { sessionId: string }) {
   const { chatSessions, activeSessionId, latestCvStructured, latestClStructured } =
     useAppSelector((s) => s.cvGeneration);
   const [editingKind, setEditingKind] = useState<"generated_cv" | "cover_letter" | null>(null);
+  const [namePrompt, setNamePrompt] = useState<{
+    title: string;
+    defaultValue: string;
+    confirmLabel?: string;
+    resolve: (value: string | null) => void;
+  } | null>(null);
+
+  const askName = (
+    title: string,
+    defaultValue: string,
+    confirmLabel?: string,
+  ): Promise<string | null> =>
+    new Promise((resolve) => {
+      setNamePrompt({ title, defaultValue, confirmLabel, resolve });
+    });
 
   useEffect(() => {
     if (activeSessionId !== sessionId) {
@@ -43,16 +59,17 @@ export function ConversationPage({ sessionId }: { sessionId: string }) {
 
   const handleSaveCurrent = async (kind: "generated_cv" | "cover_letter") => {
     const defaultName = title === "Conversation" ? "Untitled" : title;
-    const name = window.prompt(
+    const name = await askName(
       kind === "generated_cv" ? "Name this CV" : "Name this cover letter",
       kind === "generated_cv" ? `${defaultName} — CV` : `${defaultName} — Cover letter`,
+      "Save",
     );
-    if (!name?.trim()) return;
+    if (!name) return;
     try {
       if (kind === "generated_cv") {
-        await apiClient.saveCvFromSession(name.trim(), sessionId);
+        await apiClient.saveCvFromSession(name, sessionId);
       } else {
-        await apiClient.saveClFromSession(name.trim(), sessionId);
+        await apiClient.saveClFromSession(name, sessionId);
       }
       window.alert("Saved.");
     } catch (err) {
@@ -61,10 +78,14 @@ export function ConversationPage({ sessionId }: { sessionId: string }) {
   };
 
   const handleAddApplication = async () => {
-    const name = window.prompt("Name this application", title === "Conversation" ? "" : title);
-    if (!name?.trim()) return;
+    const name = await askName(
+      "Name this application",
+      title === "Conversation" ? "" : title,
+      "Create",
+    );
+    if (!name) return;
     try {
-      await apiClient.startApplicationFromSession(sessionId, name.trim());
+      await apiClient.startApplicationFromSession(sessionId, name);
       selectTab("applications");
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Could not create application.");
@@ -150,6 +171,21 @@ export function ConversationPage({ sessionId }: { sessionId: string }) {
           onClose={() => setEditingKind(null)}
         />
       )}
+      {namePrompt ? (
+        <PromptDialog
+          title={namePrompt.title}
+          defaultValue={namePrompt.defaultValue}
+          confirmLabel={namePrompt.confirmLabel}
+          onSubmit={(value) => {
+            namePrompt.resolve(value);
+            setNamePrompt(null);
+          }}
+          onCancel={() => {
+            namePrompt.resolve(null);
+            setNamePrompt(null);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

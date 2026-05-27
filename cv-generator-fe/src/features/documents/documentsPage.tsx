@@ -1,11 +1,43 @@
+import { useState } from "react";
+
 import { DocumentsHeader } from "./components/documentsHeader";
+import { PdfPreviewModal } from "./components/pdfPreviewModal";
 import { SavedDocCard } from "./components/savedDocCard";
 import { useSavedDocs } from "./hooks/useSavedDocs";
 import styles from "./documents.module.css";
 
+type PreviewState = {
+  kind: "cv" | "cl";
+  id: string;
+  name: string;
+  pdf: string | null;
+};
+
 export function DocumentsPage() {
-  const { cvs, cls, loading, busy, error, downloadCv, downloadCl, deleteCv, deleteCl } =
-    useSavedDocs();
+  const {
+    cvs,
+    cls,
+    loading,
+    busy,
+    error,
+    loadCvPdf,
+    loadClPdf,
+    downloadCv,
+    downloadCl,
+    deleteCv,
+    deleteCl,
+  } = useSavedDocs();
+  const [preview, setPreview] = useState<PreviewState | null>(null);
+
+  const openPreview = async (kind: "cv" | "cl", id: string, name: string) => {
+    setPreview({ kind, id, name, pdf: null });
+    const pdf = kind === "cv" ? await loadCvPdf(id) : await loadClPdf(id);
+    if (!pdf) {
+      setPreview(null);
+      return;
+    }
+    setPreview((prev) => (prev && prev.id === id ? { ...prev, pdf } : prev));
+  };
 
   if (loading) {
     return (
@@ -43,6 +75,7 @@ export function DocumentsPage() {
                 createdAt={cv.created_at}
                 badge="CV"
                 busy={busy}
+                onPreview={() => openPreview("cv", cv.id, cv.name)}
                 onDownload={() => downloadCv(cv)}
                 onDelete={() => deleteCv(cv.id)}
               />
@@ -62,12 +95,30 @@ export function DocumentsPage() {
                 createdAt={cl.created_at}
                 badge="CL"
                 busy={busy}
+                onPreview={() => openPreview("cl", cl.id, cl.name)}
                 onDownload={() => downloadCl(cl)}
                 onDelete={() => deleteCl(cl.id)}
               />
             ))}
           </div>
         </section>
+      ) : null}
+
+      {preview ? (
+        <PdfPreviewModal
+          title={preview.name}
+          pdfBase64={preview.pdf}
+          onClose={() => setPreview(null)}
+          onDownload={() => {
+            if (preview.kind === "cv") {
+              const cv = cvs.find((c) => c.id === preview.id);
+              if (cv) void downloadCv(cv);
+            } else {
+              const cl = cls.find((c) => c.id === preview.id);
+              if (cl) void downloadCl(cl);
+            }
+          }}
+        />
       ) : null}
     </main>
   );
