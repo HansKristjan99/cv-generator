@@ -19,8 +19,6 @@ export type JobApplicationsStore = {
   create: (body: JobApplicationCreate) => Promise<void>;
   update: (id: string, body: JobApplicationUpdate) => Promise<void>;
   remove: (id: string) => Promise<void>;
-  deleteCv: (id: string) => Promise<void>;
-  deleteCl: (id: string) => Promise<void>;
 };
 
 export function useJobApplications(): JobApplicationsStore {
@@ -99,43 +97,5 @@ export function useJobApplications(): JobApplicationsStore {
     if (ok) setApplications((prev) => prev.filter((a) => a.id !== id));
   };
 
-  const deleteCv = async (id: string) => {
-    const ok = await withSaving(
-      () => apiClient.deleteSavedCv(id).then(() => true),
-      "Unable to delete CV",
-    );
-    if (ok) {
-      setCvs((prev) => prev.filter((c) => c.id !== id));
-      setApplications((prev) =>
-        prev.map((a) => (a.submitted_cv_id === id ? { ...a, submitted_cv_id: null } : a)),
-      );
-    }
-  };
-
-  const deleteCl = async (id: string) => {
-    const ok = await withSaving(
-      () => apiClient.deleteSavedCl(id).then(() => true),
-      "Unable to delete cover letter",
-    );
-    if (ok) {
-      setCls((prev) => prev.filter((c) => c.id !== id));
-      setApplications((prev) =>
-        prev.map((a) => (a.submitted_cl_id === id ? { ...a, submitted_cl_id: null } : a)),
-      );
-    }
-  };
-
-  return {
-    applications,
-    cvs,
-    cls,
-    loading,
-    saving,
-    error,
-    create,
-    update,
-    remove,
-    deleteCv,
-    deleteCl,
-  };
+  return { applications, cvs, cls, loading, saving, error, create, update, remove };
 }

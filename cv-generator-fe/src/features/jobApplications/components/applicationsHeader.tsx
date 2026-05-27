@@ -3,10 +3,9 @@ import styles from "../jobApplications.module.css";
 type Props = {
   total: number;
   onNew: () => void;
-  onManageDocs: () => void;
 };
 
-export function ApplicationsHeader({ total, onNew, onManageDocs }: Props) {
+export function ApplicationsHeader({ total, onNew }: Props) {
   return (
     <header className={styles.header}>
       <div>
@@ -23,9 +22,6 @@ export function ApplicationsHeader({ total, onNew, onManageDocs }: Props) {
         </p>
       </div>
       <div className={styles.headerActions}>
-        <button type="button" className={styles.secondaryBtn} onClick={onManageDocs}>
-          Saved docs
-        </button>
         <button type="button" className={styles.primaryBtn} onClick={onNew}>
           + New application
         </button>
