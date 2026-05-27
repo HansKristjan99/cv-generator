@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { SignInButton, SignUpButton } from "@clerk/react";
 
-import { LoadingPage } from "../components/loadingPage";
+import { LoadingPage } from "./loadingPage";
 import styles from "./appShell.module.css";
 import authStyles from "./authenticationProvider.module.css";
 import { useApiRegistration } from "./hooks/useApiRegistration";

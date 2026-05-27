@@ -6,10 +6,10 @@ import {
   MAX_FILE_SIZE_MB,
   MAX_JOB_DESCRIPTION_CHARS,
   MAX_SESSIONS_PER_MONTH,
-} from "../../../config/limits";
+} from "../lib/limits";
 import { sendMessage } from "../cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../../../hooks";
-import type { GenerationKind } from "../../../types/chat";
+import { useAppLocation } from "../../../app/hooks/useAppLocation";
 import { cx } from "../../../utils/cx";
 import styles from "./cvChatSetup.module.css";
 
@@ -28,6 +28,7 @@ const PAGE_OPTIONS = [
 
 export const CvChatSetup = () => {
   const dispatch = useAppDispatch();
+  const { openSession } = useAppLocation();
   const { setupStatus, error: setupError, monthlySessionsUsed, isUnlimited } = useAppSelector(
     (s) => s.cvGeneration,
   );
@@ -57,10 +58,10 @@ export const CvChatSetup = () => {
     setCvFile(f);
   };
 
-  const start = () => {
+  const start = async () => {
     if (!canStart) return;
     const defaultMessage = "Help me write a CV tailored to this job.";
-    void dispatch(
+    const result = await dispatch(
       sendMessage({
         sessionId: null,
         userMessage: openingMessage.trim() || defaultMessage,
@@ -70,11 +71,14 @@ export const CvChatSetup = () => {
         pageCount,
       }),
     );
+    if (sendMessage.fulfilled.match(result)) {
+      openSession(result.payload.sessionId);
+    }
   };
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    start();
+    void start();
   };
 
   return (

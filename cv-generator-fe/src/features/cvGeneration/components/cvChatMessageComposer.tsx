@@ -1,4 +1,4 @@
-import { MAX_MESSAGES_PER_SESSION, MAX_USER_MESSAGE_CHARS } from "../../../config/limits";
+import { MAX_MESSAGES_PER_SESSION, MAX_USER_MESSAGE_CHARS } from "../lib/limits";
 import {
   selectActiveConversation,
   sendMessage,

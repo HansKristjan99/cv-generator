@@ -1,4 +1,4 @@
-import { MAX_INVENTS_PER_MONTH } from "../../../config/limits";
+import { MAX_INVENTS_PER_MONTH } from "../lib/limits";
 import { enhanceAnswers, selectActiveConversation } from "../cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../../../hooks";
 import type { CvQuestion } from "../../../types/chat";

@@ -7,18 +7,13 @@ import type { AppTab } from "./tabs";
 type Props = {
   activeTab: AppTab;
   onSelectTab: (tab: AppTab) => void;
-  onOpenSession: () => void;
   children: ReactNode;
 };
 
-export function AppScaffold({ activeTab, onSelectTab, onOpenSession, children }: Props) {
+export function AppScaffold({ activeTab, onSelectTab, children }: Props) {
   return (
     <div className={styles.shell}>
-      <Sidebar
-        activeTab={activeTab}
-        onSelectTab={onSelectTab}
-        onOpenSession={onOpenSession}
-      />
+      <Sidebar activeTab={activeTab} onSelectTab={onSelectTab} />
       <main className={styles.main}>{children}</main>
     </div>
   );

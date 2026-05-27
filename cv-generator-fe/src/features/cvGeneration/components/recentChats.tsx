@@ -1,5 +1,5 @@
-import { loadConversation } from "../cvGenerationSlice";
-import { useAppDispatch, useAppSelector } from "../../../hooks";
+import { useAppLocation } from "../../../app/hooks/useAppLocation";
+import { useAppSelector } from "../../../hooks";
 import { cx } from "../../../utils/cx";
 import styles from "./recentChats.module.css";
 
@@ -13,10 +13,9 @@ function formatRelativeDate(dateStr: string): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-export function RecentChats({ onOpenSession }: { onOpenSession?: () => void }) {
-  const dispatch = useAppDispatch();
+export function RecentChats() {
+  const { activeSessionId, openSession } = useAppLocation();
   const sessions = useAppSelector((s) => s.cvGeneration.chatSessions);
-  const activeSessionId = useAppSelector((s) => s.cvGeneration.activeSessionId);
 
   if (!sessions.length) return null;
 
@@ -37,11 +36,7 @@ export function RecentChats({ onOpenSession }: { onOpenSession?: () => void }) {
                   isActive && styles.itemActive,
                   showPending && styles.itemPending,
                 )}
-                onClick={() => {
-                  onOpenSession?.();
-                  if (session.id === activeSessionId) return;
-                  void dispatch(loadConversation(session.id));
-                }}
+                onClick={() => openSession(session.id)}
               >
                 <span className={styles.titleRow}>
                   {showPending ? <span className={styles.pendingDot} aria-hidden /> : null}
