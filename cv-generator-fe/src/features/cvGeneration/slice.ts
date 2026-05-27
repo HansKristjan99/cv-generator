@@ -81,6 +81,7 @@ const cvGenerationSlice = createSlice({
         if (state.activeSessionId !== action.meta.arg) return;
         state.messageHistory = action.payload.messages;
         state.jobDescription = action.payload.job_description;
+        state.jobRequirements = action.payload.job_requirements ?? null;
         state.sourceCvText = action.payload.source_cv_text;
         state.sourceCvPdfBase64 = action.payload.source_cv_pdf_base64;
         state.latestCvPdfBase64 = action.payload.latest_cv_pdf_base64;

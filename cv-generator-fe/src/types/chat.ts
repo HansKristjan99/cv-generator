@@ -54,6 +54,9 @@ export type LoadConversationResponse = {
   page_count: number;
   messages: ChatMessage[];
   job_description: string | null;
+  job_requirements:
+    | import("../api/job-applications/jobApplications").RequirementsAnalysis
+    | null;
   source_cv_text: string | null;
   source_cv_pdf_base64: string | null;
   latest_cv_pdf_base64: string | null;

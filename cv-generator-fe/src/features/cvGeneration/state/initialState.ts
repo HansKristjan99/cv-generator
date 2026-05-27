@@ -11,6 +11,7 @@ export const initialState: CvGenerationState = {
   manualEditStatus: "idle",
   error: null,
   jobDescription: null,
+  jobRequirements: null,
   sourceCvText: null,
   sourceCvPdfBase64: null,
   latestCvPdfBase64: null,
@@ -26,6 +27,7 @@ export const initialState: CvGenerationState = {
 
 export const PREVIEW_RESET = {
   jobDescription: null,
+  jobRequirements: null,
   sourceCvText: null,
   sourceCvPdfBase64: null,
   latestCvPdfBase64: null,

@@ -12,6 +12,21 @@ import {
   getCheckoutSessionStatus,
   getSubscription,
 } from "./billing/billing";
+import {
+  createJobApplication,
+  deleteJobApplication,
+  deleteSavedCl,
+  deleteSavedCv,
+  listJobApplications,
+  listSavedCls,
+  listSavedCvs,
+  renderSavedClPdf,
+  renderSavedCvPdf,
+  saveClFromSession,
+  saveCvFromSession,
+  startApplicationFromSession,
+  updateJobApplication,
+} from "./job-applications/jobApplications";
 
 export const apiClient = {
   registerCurrentUser,
@@ -30,6 +45,19 @@ export const apiClient = {
   createCheckoutSession,
   getCheckoutSessionStatus,
   getSubscription,
+  listJobApplications,
+  createJobApplication,
+  startApplicationFromSession,
+  updateJobApplication,
+  deleteJobApplication,
+  listSavedCvs,
+  saveCvFromSession,
+  deleteSavedCv,
+  renderSavedCvPdf,
+  listSavedCls,
+  saveClFromSession,
+  deleteSavedCl,
+  renderSavedClPdf,
 };
 
 export type ApiClient = typeof apiClient;

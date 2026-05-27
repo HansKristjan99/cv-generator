@@ -1,3 +1,4 @@
+import type { RequirementsAnalysis } from "../../../api/job-applications/jobApplications";
 import type { ChatMessage, PreviewKind, SessionSummary } from "../../../types/chat";
 import type { ClStructuredData, CvStructuredData } from "../../../types/cv";
 
@@ -14,6 +15,7 @@ export type CvGenerationState = {
   manualEditStatus: Status;
   error: string | null;
   jobDescription: string | null;
+  jobRequirements: RequirementsAnalysis | null;
   sourceCvText: string | null;
   sourceCvPdfBase64: string | null;
   latestCvPdfBase64: string | null;
