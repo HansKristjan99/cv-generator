@@ -29,8 +29,22 @@ export function ApplicationCard({ application, cvs, cls, onOpen }: Props) {
   const cv = cvs.find((c) => c.id === application.submitted_cv_id) ?? null;
   const cl = cls.find((c) => c.id === application.submitted_cl_id) ?? null;
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onOpen();
+    }
+  };
+
   return (
-    <button type="button" className={styles.card} onClick={onOpen}>
+    <div
+      className={styles.card}
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={handleKeyDown}
+    >
       <div className={styles.cardHead}>
         <h2 className={styles.cardTitle}>{application.job_name}</h2>
         <StatusPill status={application.status} />
@@ -48,6 +62,6 @@ export function ApplicationCard({ application, cvs, cls, onOpen }: Props) {
         <RequirementsBar analysis={application.job_requirements} compact />
       </div>
       <p className={styles.cardFooter}>Updated {formatRelative(application.updated_at)}</p>
-    </button>
+    </div>
   );
 }

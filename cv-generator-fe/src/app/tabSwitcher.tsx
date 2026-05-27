@@ -1,5 +1,6 @@
 import { ConversationPage } from "../features/cvGeneration/conversationPage";
 import { CvGeneratorPage } from "../features/cvGeneration/cvGeneratorPage";
+import { DocumentsPage } from "../features/documents/documentsPage";
 import { JobApplicationsPage } from "../features/jobApplications/jobApplicationsPage";
 import { SubscriptionPage } from "../features/subscription/subscriptionPage";
 import { TemplatesPage } from "../features/templates/templatesPage";
@@ -17,6 +18,8 @@ export function TabSwitcher({ activeTab, activeSessionId }: Props) {
       return <TemplatesPage />;
     case "user memory":
       return <UserMemoryPage />;
+    case "documents":
+      return <DocumentsPage />;
     case "applications":
       return <JobApplicationsPage />;
     case "subscription":
