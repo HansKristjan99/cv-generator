@@ -231,6 +231,96 @@
   font-size: 0.7rem;
 }
 
+.reqLabelMustBtn {
+  composes: reqLabelMust;
+  border: 0;
+  cursor: pointer;
+  font-weight: 600;
+  transition: filter 0.15s ease;
+}
+
+.reqLabelMustBtn:hover {
+  filter: brightness(0.96);
+}
+
+.reqLabelNiceBtn {
+  composes: reqLabelNice;
+  border: 0;
+  cursor: pointer;
+  font-weight: 600;
+  transition: filter 0.15s ease;
+}
+
+.reqLabelNiceBtn:hover {
+  filter: brightness(0.96);
+}
+
+/* ---- Requirements review list ---- */
+.reqList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.reqRowMet,
+.reqRowUnmet {
+  border: 1px solid var(--color-rule-soft);
+  border-radius: var(--radius-input);
+  padding: 12px 14px;
+  background: var(--color-bg-alt);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reqRowUnmet {
+  border-color: var(--color-danger-soft);
+  background: #fbf2ec;
+}
+
+.reqRowHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reqStatusMet {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary-deep);
+  letter-spacing: 0.03em;
+}
+
+.reqStatusUnmet {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-danger);
+  letter-spacing: 0.03em;
+}
+
+.reqText {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--color-ink);
+}
+
+.reqEvidence,
+.reqQuestion {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-muted-deep);
+  line-height: 1.5;
+}
+
+.reqEvidenceLabel {
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
+
 /* ---- Modal ---- */
 .modalScrim {
   position: fixed;

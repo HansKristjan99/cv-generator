@@ -1,0 +1,169 @@
+.page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 56px 56px;
+}
+
+.header {
+  margin-bottom: var(--space-8);
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.breadcrumbSep {
+  color: var(--color-rule);
+}
+
+.breadcrumbActive {
+  color: var(--color-ink);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.error {
+  margin: 0 0 var(--space-5);
+  padding: 12px 14px;
+  border-radius: var(--radius-input);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
+
+.loadingPanel,
+.emptyPanel {
+  composes: card from "../../primitives/primitives.module.css";
+  padding: var(--space-8);
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.emptyPanel p {
+  margin: 0 0 var(--space-3);
+}
+
+.emptyHint {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+.section {
+  margin-bottom: var(--space-8);
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.1rem;
+  margin: 0 0 var(--space-4);
+  color: var(--color-ink);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.card {
+  composes: card from "../../primitives/primitives.module.css";
+  padding: 18px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 150px;
+}
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cardBadge {
+  composes: pillMint from "../../primitives/primitives.module.css";
+  font-size: 0.7rem;
+}
+
+.cardDate {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--color-ink);
+  word-break: break-word;
+  flex: 1;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.primaryBtn {
+  composes: btnSecondary from "../../primitives/primitives.module.css";
+  padding: 7px 14px;
+  font-size: 0.82rem;
+}
+
+.dangerLink {
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-danger);
+  cursor: pointer;
+  border-radius: var(--radius-input);
+  margin-left: auto;
+}
+
+.dangerLink:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+}
+
+@media (max-width: 1000px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 28px 24px 40px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

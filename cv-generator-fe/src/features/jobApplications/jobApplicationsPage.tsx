@@ -5,26 +5,13 @@ import { ApplicationCard } from "./components/applicationCard";
 import { ApplicationDetailModal } from "./components/applicationDetailModal";
 import { ApplicationsHeader } from "./components/applicationsHeader";
 import { ManualCreateModal } from "./components/manualCreateModal";
-import { SavedDocsModal } from "./components/savedDocsModal";
 import { useJobApplications } from "./hooks/useJobApplications";
 import styles from "./jobApplications.module.css";
 
 export function JobApplicationsPage() {
-  const {
-    applications,
-    cvs,
-    cls,
-    loading,
-    saving,
-    error,
-    create,
-    update,
-    remove,
-    deleteCv,
-    deleteCl,
-  } = useJobApplications();
+  const { applications, cvs, cls, loading, saving, error, create, update, remove } =
+    useJobApplications();
   const [creating, setCreating] = useState(false);
-  const [managingDocs, setManagingDocs] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
   const open: JobApplication | null = openId
@@ -41,11 +28,7 @@ export function JobApplicationsPage() {
 
   return (
     <main className={styles.page}>
-      <ApplicationsHeader
-        total={applications.length}
-        onNew={() => setCreating(true)}
-        onManageDocs={() => setManagingDocs(true)}
-      />
+      <ApplicationsHeader total={applications.length} onNew={() => setCreating(true)} />
       {error ? <p className={styles.error}>{error}</p> : null}
 
       {applications.length === 0 ? (
@@ -97,17 +80,6 @@ export function JobApplicationsPage() {
             setOpenId(null);
           }}
           onClose={() => setOpenId(null)}
-        />
-      ) : null}
-
-      {managingDocs ? (
-        <SavedDocsModal
-          cvs={cvs}
-          cls={cls}
-          saving={saving}
-          onDeleteCv={deleteCv}
-          onDeleteCl={deleteCl}
-          onClose={() => setManagingDocs(false)}
         />
       ) : null}
     </main>
