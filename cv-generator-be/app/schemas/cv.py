@@ -40,8 +40,25 @@ class Education(BaseModel):
 class SkillSection(BaseModel):
     """One titled grouping of skills."""
 
-    title: str = Field(..., description="Heading. Examples: 'Languages & Frameworks', 'Backend & APIs', 'Infrastructure'.")
-    items: str = Field(..., description="Comma-separated items, ordered strongest to weakest.")
+    title: str = Field(
+        ...,
+        description=(
+            "Heading. MUST be one of this normalized vocabulary (pick the closest fit; "
+            "do not invent fusions like 'Domain and AI'): 'Languages', "
+            "'Frameworks & Libraries', 'Backend & APIs', 'Frontend & UI', "
+            "'Data & Databases', 'Infrastructure & DevOps', 'Cloud Platforms', "
+            "'AI & Machine Learning', 'Tools & Practices', 'Spoken Languages'. "
+            "Omit any group that has fewer than two evidenced items."
+        ),
+    )
+    items: str = Field(
+        ...,
+        description=(
+            "Comma-separated items, ordered strongest to weakest. Every item MUST be "
+            "evidenced elsewhere in the CV (experience bullets, education, projects, "
+            "or awards). Do NOT list skills that appear nowhere else."
+        ),
+    )
 
 
 class Project(BaseModel):
