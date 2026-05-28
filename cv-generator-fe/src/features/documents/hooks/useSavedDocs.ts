@@ -9,6 +9,8 @@ export type SavedDocsStore = {
   loading: boolean;
   busy: boolean;
   error: string | null;
+  loadCvPdf: (id: string) => Promise<string | null>;
+  loadClPdf: (id: string) => Promise<string | null>;
   downloadCv: (cv: SavedCv) => Promise<void>;
   downloadCl: (cl: SavedCl) => Promise<void>;
   deleteCv: (id: string) => Promise<void>;
@@ -66,13 +68,19 @@ export function useSavedDocs(): SavedDocsStore {
     }
   }
 
+  const loadCvPdf = (id: string) =>
+    withBusy(() => apiClient.renderSavedCvPdf(id), "Unable to render CV");
+
+  const loadClPdf = (id: string) =>
+    withBusy(() => apiClient.renderSavedClPdf(id), "Unable to render cover letter");
+
   const downloadCv = async (cv: SavedCv) => {
-    const pdf = await withBusy(() => apiClient.renderSavedCvPdf(cv.id), "Unable to render CV");
+    const pdf = await loadCvPdf(cv.id);
     if (pdf) triggerDownload(`${cv.name}.pdf`, pdf);
   };
 
   const downloadCl = async (cl: SavedCl) => {
-    const pdf = await withBusy(() => apiClient.renderSavedClPdf(cl.id), "Unable to render cover letter");
+    const pdf = await loadClPdf(cl.id);
     if (pdf) triggerDownload(`${cl.name}.pdf`, pdf);
   };
 
@@ -86,5 +94,17 @@ export function useSavedDocs(): SavedDocsStore {
     if (ok) setCls((prev) => prev.filter((c) => c.id !== id));
   };
 
-  return { cvs, cls, loading, busy, error, downloadCv, downloadCl, deleteCv, deleteCl };
+  return {
+    cvs,
+    cls,
+    loading,
+    busy,
+    error,
+    loadCvPdf,
+    loadClPdf,
+    downloadCv,
+    downloadCl,
+    deleteCv,
+    deleteCl,
+  };
 }
