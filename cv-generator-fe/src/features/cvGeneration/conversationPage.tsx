@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 
 import { apiClient } from "../../api/client";
 import { useAppLocation } from "../../app/hooks/useAppLocation";
@@ -20,6 +21,7 @@ import styles from "./cvGeneratorPage.module.css";
 export function ConversationPage({ sessionId }: { sessionId: string }) {
   const dispatch = useAppDispatch();
   const { selectTab } = useAppLocation();
+  const [, setSearchParams] = useSearchParams();
   const conv = useAppSelector(selectActiveConversation);
   const { chatSessions, activeSessionId, latestCvStructured, latestClStructured } =
     useAppSelector((s) => s.cvGeneration);
@@ -85,8 +87,14 @@ export function ConversationPage({ sessionId }: { sessionId: string }) {
     );
     if (!name) return;
     try {
-      await apiClient.startApplicationFromSession(sessionId, name);
-      selectTab("applications");
+      const app = await apiClient.startApplicationFromSession(sessionId, name);
+      setSearchParams((p) => {
+        const n = new URLSearchParams(p);
+        n.set("tab", "applications");
+        n.set("open", app.id);
+        n.delete("sid");
+        return n;
+      });
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Could not create application.");
     }

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 
 import type { JobApplication } from "../../api/job-applications/jobApplications";
 import { ApplicationCard } from "./components/applicationCard";
@@ -15,6 +16,15 @@ export function JobApplicationsPage() {
     useJobApplications();
   const [creating, setCreating] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const id = searchParams.get("open");
+    if (id) {
+      setOpenId(id);
+      setSearchParams((p) => { const n = new URLSearchParams(p); n.delete("open"); return n; }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [hoverStage, setHoverStage] = useState<Stage | null>(null);
 
@@ -98,7 +108,6 @@ export function JobApplicationsPage() {
                   </span>
                   <span className={styles.columnCount}>{items.length}</span>
                 </div>
-                <div className={styles.columnSub}>{def.subtitle}</div>
                 <div className={styles.columnBody}>
                   {items.length === 0 ? (
                     <div className={styles.columnEmpty}>
