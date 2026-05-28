@@ -1,3 +1,5 @@
+import { IconButton } from "../../../primitives/button";
+import { TrashIcon } from "../../../primitives/icons";
 import styles from "../userMemory.module.css";
 
 type Props = {
@@ -15,16 +17,19 @@ export function CollapsedCard({ title, meta, saving, onOpen, onDelete }: Props) 
         <span className={styles.itemTitle}>{title || "Untitled"}</span>
         {meta ? <span className={styles.itemMeta}>{meta}</span> : null}
       </button>
-      <button
-        type="button"
-        className={styles.deleteButton}
-        onClick={onDelete}
+      <IconButton
+        tone="danger"
+        size="sm"
+        label={`Delete ${title || "item"}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
         disabled={saving}
-        aria-label={`Delete ${title || "item"}`}
-        title="Delete"
+        className={styles.itemDeleteBtn}
       >
-        ×
-      </button>
+        <TrashIcon size={14} />
+      </IconButton>
     </div>
   );
 }

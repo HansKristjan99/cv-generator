@@ -68,15 +68,7 @@ export function ApplicationCard({
       <div className={styles.kanbanHead}>
         <div className={styles.kanbanIdentity}>
           <span className={styles.kanbanCompany}>{application.job_name}</span>
-          {application.job_description ? (
-            <span className={styles.kanbanRole}>
-              {application.job_description.length > 60
-                ? `${application.job_description.slice(0, 60)}…`
-                : application.job_description}
-            </span>
-          ) : null}
         </div>
-        <span className={styles.kanbanMark}>{companyMark(application.job_name)}</span>
       </div>
       <div className={styles.kanbanFoot}>
         {docLabel ? <span className={styles.tagMint}>{docLabel}</span> : null}

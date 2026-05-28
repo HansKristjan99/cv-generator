@@ -6,6 +6,9 @@ import type {
   SavedCl,
   SavedCv,
 } from "../../../api/job-applications/jobApplications";
+import { Button } from "../../../primitives/button";
+import { ConfirmDialog } from "../../../primitives/confirmDialog";
+import { TrashIcon } from "../../../primitives/icons";
 import { SUGGESTED_STATUSES, statusLabel } from "../lib/statuses";
 import { RequirementsBar } from "./requirementsBar";
 import styles from "../jobApplications.module.css";
@@ -35,6 +38,7 @@ export function ApplicationDetailModal({
   const [notes, setNotes] = useState(application.notes ?? "");
   const [cvId, setCvId] = useState(application.submitted_cv_id ?? "");
   const [clId, setClId] = useState(application.submitted_cl_id ?? "");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const statusOptions = SUGGESTED_STATUSES.includes(status as never)
     ? SUGGESTED_STATUSES
@@ -50,11 +54,6 @@ export function ApplicationDetailModal({
       submitted_cv_id: cvId || null,
       submitted_cl_id: clId || null,
     });
-  };
-
-  const handleDelete = async () => {
-    if (!window.confirm("Delete this application? This cannot be undone.")) return;
-    await onDelete();
   };
 
   return (
@@ -147,27 +146,37 @@ export function ApplicationDetailModal({
         </label>
 
         <div className={styles.modalActions}>
-          <button
-            type="button"
-            className={styles.dangerBtn}
-            onClick={handleDelete}
+          <Button
+            variant="danger"
+            size="md"
+            onClick={() => setConfirmingDelete(true)}
             disabled={saving}
+            iconBefore={<TrashIcon size={14} />}
           >
             Delete
-          </button>
+          </Button>
           <span className={styles.spacer} />
-          <button
-            type="button"
-            className={styles.secondaryBtn}
-            onClick={onClose}
-            disabled={saving}
-          >
+          <Button variant="secondary" size="md" onClick={onClose} disabled={saving}>
             Cancel
-          </button>
-          <button type="submit" className={styles.primaryBtn} disabled={saving}>
+          </Button>
+          <Button variant="primary" size="md" type="submit" disabled={saving}>
             {saving ? "Saving…" : "Save"}
-          </button>
+          </Button>
         </div>
+
+        {confirmingDelete ? (
+          <ConfirmDialog
+            title={`Delete "${application.job_name}"?`}
+            body="This application will be removed from your tracker. This cannot be undone."
+            confirmLabel="Delete"
+            busy={saving}
+            onConfirm={async () => {
+              setConfirmingDelete(false);
+              await onDelete();
+            }}
+            onCancel={() => setConfirmingDelete(false)}
+          />
+        ) : null}
       </form>
     </div>
   );
