@@ -28,10 +28,19 @@ export function statusTone(status: string): StatusTone {
   return TONE_BY_STATUS[status] ?? "neutral";
 }
 
+const ACRONYMS = new Set(["cv", "cl"]);
+
 export function statusLabel(status: string): string {
-  // "phone_screen" -> "Phone screen"
+  // "phone_screen" -> "Phone screen"; "cv_submitted" -> "CV submitted"
   const trimmed = status.trim();
   if (!trimmed) return "Untitled";
-  const spaced = trimmed.replace(/_/g, " ");
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  const tokens = trimmed.split("_").filter(Boolean);
+  if (tokens.length === 0) return "Untitled";
+  const formatted = tokens.map((token, index) => {
+    const lower = token.toLowerCase();
+    if (ACRONYMS.has(lower)) return lower.toUpperCase();
+    if (index === 0) return lower.charAt(0).toUpperCase() + lower.slice(1);
+    return lower;
+  });
+  return formatted.join(" ");
 }

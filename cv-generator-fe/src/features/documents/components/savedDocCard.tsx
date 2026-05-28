@@ -5,6 +5,7 @@ type Props = {
   createdAt: string;
   badge: string;
   busy: boolean;
+  onPreview: () => void;
   onDownload: () => void;
   onDelete: () => void;
 };
@@ -14,7 +15,15 @@ function formatDate(iso: string): string {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString();
 }
 
-export function SavedDocCard({ name, createdAt, badge, busy, onDownload, onDelete }: Props) {
+export function SavedDocCard({
+  name,
+  createdAt,
+  badge,
+  busy,
+  onPreview,
+  onDownload,
+  onDelete,
+}: Props) {
   const handleDelete = () => {
     if (window.confirm(`Delete "${name}"? Applications referencing it will be unlinked.`)) {
       onDelete();
@@ -28,6 +37,9 @@ export function SavedDocCard({ name, createdAt, badge, busy, onDownload, onDelet
       </div>
       <h3 className={styles.cardTitle}>{name}</h3>
       <div className={styles.cardActions}>
+        <button type="button" className={styles.primaryBtn} onClick={onPreview} disabled={busy}>
+          👁 Preview
+        </button>
         <button type="button" className={styles.primaryBtn} onClick={onDownload} disabled={busy}>
           ↓ Download
         </button>
