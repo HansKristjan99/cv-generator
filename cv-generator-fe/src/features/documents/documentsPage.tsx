@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
+import { ConfirmDialog } from "../../primitives/confirmDialog";
 import { DocumentsHeader, type DocsTab } from "./components/documentsHeader";
 import { PdfPreviewModal } from "./components/pdfPreviewModal";
 import { SavedDocCard } from "./components/savedDocCard";
@@ -13,6 +14,12 @@ type PreviewState = {
   pdf: string | null;
 };
 
+type DeleteState = {
+  kind: "cv" | "cl";
+  id: string;
+  name: string;
+};
+
 export function DocumentsPage() {
   const {
     cvs,
@@ -20,8 +27,8 @@ export function DocumentsPage() {
     loading,
     busy,
     error,
-    loadCvPdf,
-    loadClPdf,
+    getCvPdf,
+    getClPdf,
     downloadCv,
     downloadCl,
     deleteCv,
@@ -29,16 +36,20 @@ export function DocumentsPage() {
   } = useSavedDocs();
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [tab, setTab] = useState<DocsTab>("all");
+  const [pendingDelete, setPendingDelete] = useState<DeleteState | null>(null);
 
   const openPreview = async (kind: "cv" | "cl", id: string, name: string) => {
     setPreview({ kind, id, name, pdf: null });
-    const pdf = kind === "cv" ? await loadCvPdf(id) : await loadClPdf(id);
+    const pdf = kind === "cv" ? await getCvPdf(id) : await getClPdf(id);
     if (!pdf) {
       setPreview(null);
       return;
     }
     setPreview((prev) => (prev && prev.id === id ? { ...prev, pdf } : prev));
   };
+
+  const cvLoader = useCallback((id: string) => () => getCvPdf(id), [getCvPdf]);
+  const clLoader = useCallback((id: string) => () => getClPdf(id), [getClPdf]);
 
   if (loading) {
     return (
@@ -51,6 +62,14 @@ export function DocumentsPage() {
   const isEmpty = cvs.length === 0 && cls.length === 0;
   const showCvs = tab === "all" || tab === "cv";
   const showCls = tab === "all" || tab === "cl";
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const { kind, id } = pendingDelete;
+    setPendingDelete(null);
+    if (kind === "cv") await deleteCv(id);
+    else await deleteCl(id);
+  };
 
   return (
     <main className={styles.page}>
@@ -83,9 +102,10 @@ export function DocumentsPage() {
                 createdAt={cv.created_at}
                 kind="cv"
                 busy={busy}
+                getPdf={cvLoader(cv.id)}
                 onPreview={() => openPreview("cv", cv.id, cv.name)}
                 onDownload={() => downloadCv(cv)}
-                onDelete={() => deleteCv(cv.id)}
+                onDelete={() => setPendingDelete({ kind: "cv", id: cv.id, name: cv.name })}
               />
             ))}
           </div>
@@ -103,9 +123,10 @@ export function DocumentsPage() {
                 createdAt={cl.created_at}
                 kind="cl"
                 busy={busy}
+                getPdf={clLoader(cl.id)}
                 onPreview={() => openPreview("cl", cl.id, cl.name)}
                 onDownload={() => downloadCl(cl)}
-                onDelete={() => deleteCl(cl.id)}
+                onDelete={() => setPendingDelete({ kind: "cl", id: cl.id, name: cl.name })}
               />
             ))}
           </div>
@@ -126,6 +147,21 @@ export function DocumentsPage() {
               if (cl) void downloadCl(cl);
             }
           }}
+        />
+      ) : null}
+
+      {pendingDelete ? (
+        <ConfirmDialog
+          title={`Delete "${pendingDelete.name}"?`}
+          body={
+            pendingDelete.kind === "cv"
+              ? "Applications referencing this CV will be unlinked. This cannot be undone."
+              : "Applications referencing this cover letter will be unlinked. This cannot be undone."
+          }
+          confirmLabel="Delete"
+          busy={busy}
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
         />
       ) : null}
     </main>

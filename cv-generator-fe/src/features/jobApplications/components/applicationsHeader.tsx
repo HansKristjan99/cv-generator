@@ -1,3 +1,4 @@
+import { Button } from "../../../primitives/button";
 import styles from "../jobApplications.module.css";
 
 type Props = {
@@ -22,9 +23,9 @@ export function ApplicationsHeader({ total, onNew }: Props) {
         </p>
       </div>
       <div className={styles.headerActions}>
-        <button type="button" className={styles.primaryBtn} onClick={onNew}>
+        <Button variant="primary" onClick={onNew}>
           + New application
-        </button>
+        </Button>
       </div>
     </header>
   );
