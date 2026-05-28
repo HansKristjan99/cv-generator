@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { JobApplication } from "../../api/job-applications/jobApplications";
 import { ApplicationCard } from "./components/applicationCard";
@@ -6,6 +6,8 @@ import { ApplicationDetailModal } from "./components/applicationDetailModal";
 import { ApplicationsHeader } from "./components/applicationsHeader";
 import { ManualCreateModal } from "./components/manualCreateModal";
 import { useJobApplications } from "./hooks/useJobApplications";
+import { STAGES, type Stage, stageForStatus } from "./lib/statuses";
+import { cx } from "../../utils/cx";
 import styles from "./jobApplications.module.css";
 
 export function JobApplicationsPage() {
@@ -13,10 +15,38 @@ export function JobApplicationsPage() {
     useJobApplications();
   const [creating, setCreating] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [hoverStage, setHoverStage] = useState<Stage | null>(null);
+
+  const grouped = useMemo(() => {
+    const map: Record<Stage, JobApplication[]> = {
+      saved: [],
+      applied: [],
+      interviewing: [],
+      offer: [],
+      closed: [],
+    };
+    for (const a of applications) {
+      map[stageForStatus(a.status)].push(a);
+    }
+    return map;
+  }, [applications]);
 
   const open: JobApplication | null = openId
     ? applications.find((a) => a.id === openId) ?? null
     : null;
+
+  const handleDrop = (stage: Stage) => {
+    setHoverStage(null);
+    if (!dragId) return;
+    const dragged = applications.find((a) => a.id === dragId);
+    setDragId(null);
+    if (!dragged) return;
+    if (stageForStatus(dragged.status) === stage) return;
+    const def = STAGES.find((s) => s.id === stage);
+    if (!def) return;
+    void update(dragged.id, { status: def.defaultStatus });
+  };
 
   if (loading) {
     return (
@@ -39,16 +69,61 @@ export function JobApplicationsPage() {
           </p>
         </section>
       ) : (
-        <div className={styles.grid}>
-          {applications.map((a) => (
-            <ApplicationCard
-              key={a.id}
-              application={a}
-              cvs={cvs}
-              cls={cls}
-              onOpen={() => setOpenId(a.id)}
-            />
-          ))}
+        <div className={styles.board}>
+          {STAGES.map((def) => {
+            const items = grouped[def.id];
+            const isHover = hoverStage === def.id;
+            return (
+              <div
+                key={def.id}
+                className={cx(styles.column, isHover && styles.columnDropHover)}
+                onDragOver={(e) => {
+                  if (!dragId) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (hoverStage !== def.id) setHoverStage(def.id);
+                }}
+                onDragLeave={(e) => {
+                  if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                  if (hoverStage === def.id) setHoverStage(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleDrop(def.id);
+                }}
+              >
+                <div className={styles.columnHead}>
+                  <span className={cx(styles.columnLabel, styles[`columnLabel_${def.tone}`])}>
+                    {def.label.toUpperCase()}
+                  </span>
+                  <span className={styles.columnCount}>{items.length}</span>
+                </div>
+                <div className={styles.columnSub}>{def.subtitle}</div>
+                <div className={styles.columnBody}>
+                  {items.length === 0 ? (
+                    <div className={styles.columnEmpty}>
+                      Drag cards here.
+                    </div>
+                  ) : (
+                    items.map((a) => (
+                      <ApplicationCard
+                        key={a.id}
+                        application={a}
+                        cvs={cvs}
+                        cls={cls}
+                        onOpen={() => setOpenId(a.id)}
+                        onDragStart={(id) => setDragId(id)}
+                        onDragEnd={() => {
+                          setDragId(null);
+                          setHoverStage(null);
+                        }}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

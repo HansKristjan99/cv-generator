@@ -44,10 +44,11 @@ logger = logging.getLogger(__name__)
 
 def _latest_structured_from_session(
     db: Session, session: CvSession, msg_type: str
-) -> dict | None:
+) -> tuple[dict, str | None] | None:
     """Scan a session's messages reverse-chrono for the most recent assistant
     CV or cover-letter (msg_type in {'cv','cover_letter'}) and return its
-    structured_data, or None if absent."""
+    (structured_data, pdf_base64) — pdf may be None if it wasn't cached on
+    the message."""
     msgs = db.scalars(
         select(Message)
         .where(Message.cv_session_id == session.id)
@@ -59,8 +60,46 @@ def _latest_structured_from_session(
         if m.content.get("type") == msg_type:
             data = m.content.get("structured_data")
             if data:
-                return data
+                return data, m.content.get("pdf_base64") or None
     return None
+
+
+def _compile_cv_pdf(db: Session, cv: Cv) -> str:
+    """Compile a saved CV to PDF (base64), cache it on the row, return it."""
+    try:
+        structured = CurriculumVitae.model_validate(cv.structured_data)
+    except ValidationError as exc:
+        raise HTTPException(422, f"Stored CV is malformed: {exc}") from exc
+    slug = DEFAULT_TEMPLATE_SLUG
+    if cv.template_id:
+        tmpl = db.get(Template, cv.template_id)
+        if tmpl:
+            slug = tmpl.slug
+    latex = cv_to_latex(escape_cv_for_latex(structured), slug)
+    compiled = compile_latex_to_pdf(latex)
+    if not compiled.success or not compiled.pdf_bytes:
+        logger.error("CV %s PDF compile failed: %s", cv.id, compiled.error)
+        raise HTTPException(500, "PDF compilation failed.")
+    pdf_b64 = base64.b64encode(compiled.pdf_bytes).decode()
+    cv.pdf_base64 = pdf_b64
+    db.commit()
+    return pdf_b64
+
+
+def _compile_cl_pdf(db: Session, cl: Cl) -> str:
+    try:
+        structured = CoverLetter.model_validate(cl.structured_data)
+    except ValidationError as exc:
+        raise HTTPException(422, f"Stored cover letter is malformed: {exc}") from exc
+    latex = cover_letter_to_latex(escape_cover_letter_for_latex(structured))
+    compiled = compile_latex_to_pdf(latex)
+    if not compiled.success or not compiled.pdf_bytes:
+        logger.error("CL %s PDF compile failed: %s", cl.id, compiled.error)
+        raise HTTPException(500, "PDF compilation failed.")
+    pdf_b64 = base64.b64encode(compiled.pdf_bytes).decode()
+    cl.pdf_base64 = pdf_b64
+    db.commit()
+    return pdf_b64
 
 
 def _to_application_out(app: JobApplication) -> JobApplicationOut:
@@ -110,14 +149,16 @@ def save_cv_from_session(
     )
     if session is None:
         raise HTTPException(404, "Conversation not found.")
-    structured = _latest_structured_from_session(db, session, "cv")
-    if structured is None:
+    latest = _latest_structured_from_session(db, session, "cv")
+    if latest is None:
         raise HTTPException(404, "No CV has been generated in this conversation yet.")
+    structured, pdf_b64 = latest
     cv = Cv(
         user_id=current_user.id,
         name=body.name.strip() or "Untitled CV",
         structured_data=structured,
         template_id=current_user.preferred_template_id,
+        pdf_base64=pdf_b64,
     )
     db.add(cv)
     db.commit()
@@ -147,21 +188,8 @@ def render_cv_pdf(
     cv = db.scalar(select(Cv).where(Cv.id == cv_id, Cv.user_id == current_user.id))
     if cv is None:
         raise HTTPException(404, "CV not found.")
-    try:
-        structured = CurriculumVitae.model_validate(cv.structured_data)
-    except ValidationError as exc:
-        raise HTTPException(422, f"Stored CV is malformed: {exc}") from exc
-    slug = DEFAULT_TEMPLATE_SLUG
-    if cv.template_id:
-        tmpl = db.get(Template, cv.template_id)
-        if tmpl:
-            slug = tmpl.slug
-    latex = cv_to_latex(escape_cv_for_latex(structured), slug)
-    compiled = compile_latex_to_pdf(latex)
-    if not compiled.success or not compiled.pdf_bytes:
-        logger.error("CV %s PDF compile failed: %s", cv_id, compiled.error)
-        raise HTTPException(500, "PDF compilation failed.")
-    return {"pdf_base64": base64.b64encode(compiled.pdf_bytes).decode()}
+    pdf_b64 = cv.pdf_base64 or _compile_cv_pdf(db, cv)
+    return {"pdf_base64": pdf_b64}
 
 
 # ---------- saved cover letters ----------
@@ -189,13 +217,15 @@ def save_cl_from_session(
     )
     if session is None:
         raise HTTPException(404, "Conversation not found.")
-    structured = _latest_structured_from_session(db, session, "cover_letter")
-    if structured is None:
+    latest = _latest_structured_from_session(db, session, "cover_letter")
+    if latest is None:
         raise HTTPException(404, "No cover letter has been generated in this conversation yet.")
+    structured, pdf_b64 = latest
     cl = Cl(
         user_id=current_user.id,
         name=body.name.strip() or "Untitled cover letter",
         structured_data=structured,
+        pdf_base64=pdf_b64,
     )
     db.add(cl)
     db.commit()
@@ -225,16 +255,8 @@ def render_cl_pdf(
     cl = db.scalar(select(Cl).where(Cl.id == cl_id, Cl.user_id == current_user.id))
     if cl is None:
         raise HTTPException(404, "Cover letter not found.")
-    try:
-        structured = CoverLetter.model_validate(cl.structured_data)
-    except ValidationError as exc:
-        raise HTTPException(422, f"Stored cover letter is malformed: {exc}") from exc
-    latex = cover_letter_to_latex(escape_cover_letter_for_latex(structured))
-    compiled = compile_latex_to_pdf(latex)
-    if not compiled.success or not compiled.pdf_bytes:
-        logger.error("CL %s PDF compile failed: %s", cl_id, compiled.error)
-        raise HTTPException(500, "PDF compilation failed.")
-    return {"pdf_base64": base64.b64encode(compiled.pdf_bytes).decode()}
+    pdf_b64 = cl.pdf_base64 or _compile_cl_pdf(db, cl)
+    return {"pdf_base64": pdf_b64}
 
 
 # ---------- applications ----------
@@ -290,26 +312,30 @@ def start_from_session(
         raise HTTPException(404, "Conversation not found.")
 
     name = body.job_name.strip() or session.title or "Untitled application"
-    cv_structured = _latest_structured_from_session(db, session, "cv")
-    cl_structured = _latest_structured_from_session(db, session, "cover_letter")
+    cv_latest = _latest_structured_from_session(db, session, "cv")
+    cl_latest = _latest_structured_from_session(db, session, "cover_letter")
 
     cv_id: uuid.UUID | None = None
     cl_id: uuid.UUID | None = None
-    if cv_structured is not None:
+    if cv_latest is not None:
+        cv_structured, cv_pdf_b64 = cv_latest
         cv = Cv(
             user_id=current_user.id,
             name=f"{name} — CV",
             structured_data=cv_structured,
             template_id=current_user.preferred_template_id,
+            pdf_base64=cv_pdf_b64,
         )
         db.add(cv)
         db.flush()
         cv_id = cv.id
-    if cl_structured is not None:
+    if cl_latest is not None:
+        cl_structured, cl_pdf_b64 = cl_latest
         cl = Cl(
             user_id=current_user.id,
             name=f"{name} — Cover letter",
             structured_data=cl_structured,
+            pdf_base64=cl_pdf_b64,
         )
         db.add(cl)
         db.flush()
