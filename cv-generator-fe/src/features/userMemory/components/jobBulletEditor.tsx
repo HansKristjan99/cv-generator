@@ -1,3 +1,5 @@
+import { Button } from "../../../primitives/button";
+import { TrashIcon } from "../../../primitives/icons";
 import type { BulletDraft, Editor, JobDraft } from "../lib/types";
 import styles from "../userMemory.module.css";
 
@@ -48,9 +50,9 @@ export function JobBulletEditor({ editor, setEditor, draft, bullet, index }: Pro
         onChange={(event) => update("relevant_technologies", event.target.value)}
         placeholder="Relevant technologies"
       />
-      <button type="button" className={styles.inlineDanger} onClick={remove}>
+      <Button variant="danger" size="sm" onClick={remove} iconBefore={<TrashIcon size={13} />}>
         Remove bullet
-      </button>
+      </Button>
     </div>
   );
 }

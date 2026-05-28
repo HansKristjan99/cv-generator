@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 
+import { Button, IconButton } from "../../../primitives/button";
+import { CloseIcon, DownloadIcon } from "../../../primitives/icons";
 import styles from "../documents.module.css";
 
 type Props = {
@@ -26,22 +28,18 @@ export function PdfPreviewModal({ title, pdfBase64, onClose, onDownload }: Props
         <header className={styles.previewHead}>
           <h2 className={styles.previewTitle}>{title}</h2>
           <div className={styles.previewControls}>
-            <button
-              type="button"
-              className={styles.previewDownloadBtn}
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onDownload}
               disabled={!dataUrl}
+              iconBefore={<DownloadIcon size={14} />}
             >
-              ↓ Download
-            </button>
-            <button
-              type="button"
-              className={styles.previewCloseBtn}
-              onClick={onClose}
-              aria-label="Close preview"
-            >
-              ✕
-            </button>
+              Download
+            </Button>
+            <IconButton label="Close preview" onClick={onClose}>
+              <CloseIcon size={16} />
+            </IconButton>
           </div>
         </header>
         <div className={styles.previewBody}>

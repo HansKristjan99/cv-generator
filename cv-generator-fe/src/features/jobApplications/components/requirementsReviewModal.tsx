@@ -2,6 +2,7 @@ import type {
   JobRequirement,
   RequirementsAnalysis,
 } from "../../../api/job-applications/jobApplications";
+import { Button } from "../../../primitives/button";
 import styles from "../jobApplications.module.css";
 
 type Props = {
@@ -32,9 +33,9 @@ export function RequirementsReviewModal({ analysis, focus, onClose }: Props) {
 
         <div className={styles.modalActions}>
           <span className={styles.spacer} />
-          <button type="button" className={styles.secondaryBtn} onClick={onClose}>
+          <Button variant="secondary" size="md" onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>
