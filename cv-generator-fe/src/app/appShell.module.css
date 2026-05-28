@@ -144,13 +144,7 @@
   width: 100%;
 }
 
-.authButton {
-  composes: btnPrimary from "../primitives/primitives.module.css";
-  width: 100%;
-}
-
-.authButtonSecondary {
-  composes: btnSecondary from "../primitives/primitives.module.css";
+.authButtonFull {
   width: 100%;
 }
 

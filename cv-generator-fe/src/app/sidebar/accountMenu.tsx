@@ -1,5 +1,6 @@
 import { SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/react";
 
+import { Button } from "../../primitives/button";
 import styles from "../appShell.module.css";
 
 export function AccountMenu() {
@@ -14,14 +15,12 @@ export function AccountMenu() {
       ) : (
         <div className={styles.authBox}>
           <SignInButton mode="modal">
-            <button type="button" className={styles.authButton}>
+            <Button variant="primary" className={styles.authButtonFull}>
               Sign in
-            </button>
+            </Button>
           </SignInButton>
           <SignUpButton mode="modal">
-            <button type="button" className={styles.authButtonSecondary}>
-              Create account
-            </button>
+            <Button className={styles.authButtonFull}>Create account</Button>
           </SignUpButton>
         </div>
       )}

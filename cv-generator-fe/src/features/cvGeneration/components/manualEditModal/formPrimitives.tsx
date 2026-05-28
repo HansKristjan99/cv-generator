@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { Button, IconButton } from "../../../../primitives/button";
+import { TrashIcon } from "../../../../primitives/icons";
 import styles from "./manualEditModal.module.css";
 
 export function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -73,9 +75,13 @@ export function ListEditor<T>({ items, onChange, newItem, renderItem }: ListEdit
           () => onChange(items.filter((_, i) => i !== idx)),
         ),
       )}
-      <button type="button" className={styles.addBtn} onClick={() => onChange([...items, newItem()])}>
+      <Button
+        size="sm"
+        className={styles.listEditorAdd}
+        onClick={() => onChange([...items, newItem()])}
+      >
         + Add
-      </button>
+      </Button>
     </div>
   );
 }
@@ -84,9 +90,15 @@ export function ItemCard({ onRemove, children }: { onRemove: () => void; childre
   return (
     <div className={styles.itemCard}>
       <div className={styles.itemCardContent}>{children}</div>
-      <button type="button" className={styles.removeBtn} onClick={onRemove} aria-label="Remove">
-        Remove
-      </button>
+      <IconButton
+        tone="danger"
+        size="sm"
+        label="Remove"
+        onClick={onRemove}
+        className={styles.itemCardRemove}
+      >
+        <TrashIcon size={14} />
+      </IconButton>
     </div>
   );
 }
