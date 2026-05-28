@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useState } from "react";
 
+import { DownloadButton } from "../../../primitives/button";
 import type { PreviewKind } from "../../../types/chat";
 import { cx } from "../../../utils/cx";
 import styles from "./cvPreviewPane.module.css";
@@ -81,9 +82,7 @@ export const CvPreviewPane = ({
         </div>
         <div className={styles.controls}>
           {active?.mode === "pdf" && dataUrl ? (
-            <a className={styles.download} href={dataUrl} download={active.downloadName ?? "document.pdf"}>
-              ↓ Download
-            </a>
+            <DownloadButton href={dataUrl} downloadName={active.downloadName ?? "document.pdf"} />
           ) : null}
           {active &&
             onEdit &&

@@ -164,7 +164,3 @@
   background: var(--color-card);
 }
 
-.download {
-  composes: actionButton;
-  text-decoration: none;
-}
