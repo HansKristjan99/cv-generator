@@ -1,3 +1,4 @@
+import { Button } from "../../../primitives/button";
 import { cx } from "../../../utils/cx";
 import { PRO_FEATURES, PRO_PRICE_LABEL } from "../lib/planContent";
 import styles from "../subscription.module.css";
@@ -51,25 +52,26 @@ export function ProPlanCard({
       <div className={styles.planFoot}>
         {isActive ? (
           <>
-            <button
-              type="button"
-              className={styles.planButtonSecondary}
+            <Button
+              size="md"
+              className={styles.planButtonFull}
               disabled={isOpeningPortal}
               onClick={onManageBilling}
             >
               {isOpeningPortal ? "Opening…" : "Manage billing"}
-            </button>
+            </Button>
             {renewalDate ? <p className={styles.renewal}>Renews on {renewalDate}</p> : null}
           </>
         ) : (
-          <button
-            type="button"
-            className={styles.planButton}
+          <Button
+            variant="primary"
+            size="md"
+            className={styles.planButtonFull}
             disabled={isStartingCheckout || !canSubscribe}
             onClick={onSubscribe}
           >
             {isStartingCheckout ? "Starting…" : "Subscribe to Pro"}
-          </button>
+          </Button>
         )}
       </div>
     </article>

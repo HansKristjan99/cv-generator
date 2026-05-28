@@ -206,22 +206,8 @@
   gap: 10px;
 }
 
-.planButton {
-  composes: btnPrimary from "../../primitives/primitives.module.css";
+.planButtonFull {
   width: 100%;
-  padding: 12px 18px;
-}
-
-.planButtonSecondary {
-  composes: btnSecondary from "../../primitives/primitives.module.css";
-  width: 100%;
-  padding: 12px 18px;
-}
-
-.planButton:disabled,
-.planButtonSecondary:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 .renewal {
@@ -266,12 +252,6 @@
   font-weight: 500;
   font-size: 1.05rem;
   color: var(--color-ink);
-}
-
-.backButton {
-  composes: btnSecondary from "../../primitives/primitives.module.css";
-  padding: 8px 14px;
-  font-size: 0.82rem;
 }
 
 .checkoutBody {

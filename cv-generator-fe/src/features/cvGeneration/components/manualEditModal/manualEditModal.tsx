@@ -1,6 +1,8 @@
 import { useState } from "react";
 
 import { useAppDispatch, useAppSelector } from "../../../../hooks";
+import { Button, IconButton } from "../../../../primitives/button";
+import { CloseIcon } from "../../../../primitives/icons";
 import type { ClStructuredData, CvStructuredData } from "../../../../types/cv";
 import { saveManualEdit } from "../../thunks/saveManualEdit";
 import { ClForm } from "./clForm";
@@ -37,9 +39,9 @@ export function ManualEditModal({ kind, initialData, onClose }: Props) {
       <div className={styles.panel} role="dialog" aria-modal="true">
         <div className={styles.panelHeader}>
           <span className={styles.panelTitle}>{isCv ? "Edit CV" : "Edit Cover Letter"}</span>
-          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close">
-            ✕
-          </button>
+          <IconButton label="Close" onClick={onClose}>
+            <CloseIcon size={16} />
+          </IconButton>
         </div>
 
         <div className={styles.body}>
@@ -57,12 +59,12 @@ export function ManualEditModal({ kind, initialData, onClose }: Props) {
         </div>
 
         <div className={styles.footer}>
-          <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={saving}>
+          <Button onClick={onClose} disabled={saving}>
             Cancel
-          </button>
-          <button type="button" className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+          </Button>
+          <Button variant="primary" onClick={handleSave} disabled={saving}>
             {saving ? "Saving…" : "Save & re-render"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

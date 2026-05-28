@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useState } from "react";
 
-import { DownloadButton } from "../../../primitives/button";
+import { Button, DownloadButton, IconButton } from "../../../primitives/button";
 import type { PreviewKind } from "../../../types/chat";
 import { cx } from "../../../utils/cx";
 import styles from "./cvPreviewPane.module.css";
@@ -88,48 +88,39 @@ export const CvPreviewPane = ({
             onEdit &&
             (active.kind === "generated_cv" || active.kind === "cover_letter") &&
             active.mode === "pdf" && (
-              <button
-                type="button"
-                className={styles.editBtn}
+              <Button
+                size="sm"
                 onClick={() => onEdit(active.kind as "generated_cv" | "cover_letter")}
                 title="Edit fields manually"
               >
                 ✎ Edit
-              </button>
+              </Button>
             )}
           {active &&
             onSaveCurrent &&
             (active.kind === "generated_cv" || active.kind === "cover_letter") &&
             active.mode === "pdf" && (
-              <button
-                type="button"
-                className={styles.editBtn}
+              <Button
+                size="sm"
                 onClick={() => onSaveCurrent(active.kind as "generated_cv" | "cover_letter")}
                 title="Save with a custom name for later use"
               >
                 ☆ Save
-              </button>
+              </Button>
             )}
           {onAddApplication ? (
-            <button
-              type="button"
-              className={styles.editBtn}
-              onClick={onAddApplication}
-              title="Add to your tracked applications"
-            >
+            <Button size="sm" onClick={onAddApplication} title="Add to your tracked applications">
               + Add application
-            </button>
+            </Button>
           ) : null}
           {active && (
-            <button
-              type="button"
-              className={styles.control}
+            <IconButton
+              size="sm"
+              label={isFullscreen ? "Exit full screen (Esc)" : "Full screen"}
               onClick={() => setIsFullscreen((v) => !v)}
-              aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
-              title={isFullscreen ? "Exit full screen (Esc)" : "Full screen"}
             >
               {isFullscreen ? "⤡" : "⤢"}
-            </button>
+            </IconButton>
           )}
         </div>
       </div>

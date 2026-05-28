@@ -1,3 +1,4 @@
+import { Button } from "../../../primitives/button";
 import type { ChatMessage } from "../../../types/chat";
 import { cx } from "../../../utils/cx";
 import { CvChatEnhanceButton } from "./cvChatEnhanceButton";
@@ -18,13 +19,12 @@ export const CvChatMessage = ({ message }: { message: ChatMessage }) => {
         <div className={styles.cvCard}>
           <div className={styles.cvBar}>
             <span className={styles.cvName}>{fileLabel}</span>
-            <button
-              type="button"
-              className={styles.copy}
+            <Button
+              size="sm"
               onClick={() => void navigator.clipboard.writeText(message.content)}
             >
               Copy
-            </button>
+            </Button>
           </div>
           <pre className={styles.cvPre}>{message.content}</pre>
         </div>

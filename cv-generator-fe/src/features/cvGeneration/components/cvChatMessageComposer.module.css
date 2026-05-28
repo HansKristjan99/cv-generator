@@ -47,12 +47,6 @@
   box-shadow: none;
 }
 
-.send {
-  composes: btnPrimary from "../../../primitives/primitives.module.css";
-  border-radius: var(--radius-pill);
-  padding: 9px 18px;
-}
-
 .limitNote {
   margin: 0;
   font-size: 0.78rem;

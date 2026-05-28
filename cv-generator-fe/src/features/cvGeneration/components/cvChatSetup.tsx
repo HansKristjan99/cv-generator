@@ -10,6 +10,7 @@ import {
 import { sendMessage } from "../cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../../../hooks";
 import { useAppLocation } from "../../../app/hooks/useAppLocation";
+import { Button } from "../../../primitives/button";
 import { cx } from "../../../utils/cx";
 import styles from "./cvChatSetup.module.css";
 
@@ -219,9 +220,9 @@ export const CvChatSetup = () => {
             </p>
           ) : null}
           <div className={styles.startButtons}>
-            <button type="submit" className={styles.start} disabled={!canStart}>
+            <Button type="submit" variant="primary" size="lg" disabled={!canStart}>
               {isLoading ? "Starting…" : "Create my CV →"}
-            </button>
+            </Button>
           </div>
         </div>
       </footer>

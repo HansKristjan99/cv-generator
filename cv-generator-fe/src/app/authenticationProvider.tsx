@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { SignInButton, SignUpButton } from "@clerk/react";
 
+import { Button } from "../primitives/button";
 import { LoadingPage } from "./loadingPage";
 import styles from "./appShell.module.css";
 import authStyles from "./authenticationProvider.module.css";
@@ -25,14 +26,12 @@ function SignInPrompt() {
       <h2 className={styles.placeholderTitle}>Sign in to continue</h2>
       <div className={styles.signInActions}>
         <SignInButton mode="modal">
-          <button type="button" className={styles.authButton}>
+          <Button variant="primary" className={styles.authButtonFull}>
             Sign in
-          </button>
+          </Button>
         </SignInButton>
         <SignUpButton mode="modal">
-          <button type="button" className={styles.authButtonSecondary}>
-            Create account
-          </button>
+          <Button className={styles.authButtonFull}>Create account</Button>
         </SignUpButton>
       </div>
     </section>
