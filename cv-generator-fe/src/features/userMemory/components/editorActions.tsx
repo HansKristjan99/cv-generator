@@ -1,3 +1,5 @@
+import { Button } from "../../../primitives/button";
+import { TrashIcon } from "../../../primitives/icons";
 import styles from "../userMemory.module.css";
 
 type Props = {
@@ -21,18 +23,24 @@ export function EditorActions({
     <footer className={styles.editorActions}>
       <div>
         {canRemove ? (
-          <button type="button" className={styles.removeButton} onClick={onRemove} disabled={saving}>
+          <Button
+            variant="danger"
+            size="md"
+            onClick={onRemove}
+            disabled={saving}
+            iconBefore={<TrashIcon size={14} />}
+          >
             Remove
-          </button>
+          </Button>
         ) : null}
       </div>
       <div className={styles.editorActionGroup}>
-        <button type="button" className={styles.cancelButton} onClick={onCancel} disabled={saving}>
+        <Button variant="secondary" size="md" onClick={onCancel} disabled={saving}>
           Cancel
-        </button>
-        <button type="button" className={styles.saveButton} onClick={onSave} disabled={!canSave || saving}>
+        </Button>
+        <Button variant="primary" size="md" onClick={onSave} disabled={!canSave || saving}>
           {saving ? "Saving…" : "Save"}
-        </button>
+        </Button>
       </div>
     </footer>
   );

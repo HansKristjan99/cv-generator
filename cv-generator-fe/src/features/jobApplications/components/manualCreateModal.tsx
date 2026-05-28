@@ -5,6 +5,7 @@ import type {
   SavedCl,
   SavedCv,
 } from "../../../api/job-applications/jobApplications";
+import { Button } from "../../../primitives/button";
 import { SUGGESTED_STATUSES, statusLabel } from "../lib/statuses";
 import styles from "../jobApplications.module.css";
 
@@ -118,17 +119,13 @@ export function ManualCreateModal({ cvs, cls, saving, onSubmit, onClose }: Props
         </div>
 
         <div className={styles.modalActions}>
-          <button
-            type="button"
-            className={styles.secondaryBtn}
-            onClick={onClose}
-            disabled={saving}
-          >
+          <span className={styles.spacer} />
+          <Button variant="secondary" size="md" onClick={onClose} disabled={saving}>
             Cancel
-          </button>
-          <button type="submit" className={styles.primaryBtn} disabled={!canSubmit}>
+          </Button>
+          <Button variant="primary" size="md" type="submit" disabled={!canSubmit}>
             {saving ? "Saving…" : "Create"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

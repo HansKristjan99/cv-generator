@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiClient } from "../../../api/client";
 import type { SavedCl, SavedCv } from "../../../api/job-applications/jobApplications";
@@ -9,8 +9,8 @@ export type SavedDocsStore = {
   loading: boolean;
   busy: boolean;
   error: string | null;
-  loadCvPdf: (id: string) => Promise<string | null>;
-  loadClPdf: (id: string) => Promise<string | null>;
+  getCvPdf: (id: string) => Promise<string | null>;
+  getClPdf: (id: string) => Promise<string | null>;
   downloadCv: (cv: SavedCv) => Promise<void>;
   downloadCl: (cl: SavedCl) => Promise<void>;
   deleteCv: (id: string) => Promise<void>;
@@ -34,6 +34,11 @@ export function useSavedDocs(): SavedDocsStore {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Per-id PDF cache. We dedupe concurrent fetches by stashing the in-flight
+  // promise; resolved bytes stay in the map so re-opening a preview is instant.
+  const cvPdfCache = useRef(new Map<string, Promise<string | null>>());
+  const clPdfCache = useRef(new Map<string, Promise<string | null>>());
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -55,6 +60,38 @@ export function useSavedDocs(): SavedDocsStore {
     };
   }, []);
 
+  const cachedFetch = useCallback(
+    (
+      cache: React.MutableRefObject<Map<string, Promise<string | null>>>,
+      id: string,
+      fetcher: () => Promise<string>,
+      errMsg: string,
+    ): Promise<string | null> => {
+      const existing = cache.current.get(id);
+      if (existing) return existing;
+      const promise = fetcher().catch((err) => {
+        cache.current.delete(id);
+        setError(err instanceof Error ? err.message : errMsg);
+        return null as string | null;
+      });
+      cache.current.set(id, promise);
+      return promise;
+    },
+    [],
+  );
+
+  const getCvPdf = useCallback(
+    (id: string) =>
+      cachedFetch(cvPdfCache, id, () => apiClient.renderSavedCvPdf(id), "Unable to render CV"),
+    [cachedFetch],
+  );
+
+  const getClPdf = useCallback(
+    (id: string) =>
+      cachedFetch(clPdfCache, id, () => apiClient.renderSavedClPdf(id), "Unable to render cover letter"),
+    [cachedFetch],
+  );
+
   async function withBusy<T>(fn: () => Promise<T>, errMsg: string): Promise<T | null> {
     setBusy(true);
     setError(null);
@@ -68,30 +105,30 @@ export function useSavedDocs(): SavedDocsStore {
     }
   }
 
-  const loadCvPdf = (id: string) =>
-    withBusy(() => apiClient.renderSavedCvPdf(id), "Unable to render CV");
-
-  const loadClPdf = (id: string) =>
-    withBusy(() => apiClient.renderSavedClPdf(id), "Unable to render cover letter");
-
   const downloadCv = async (cv: SavedCv) => {
-    const pdf = await loadCvPdf(cv.id);
+    const pdf = await getCvPdf(cv.id);
     if (pdf) triggerDownload(`${cv.name}.pdf`, pdf);
   };
 
   const downloadCl = async (cl: SavedCl) => {
-    const pdf = await loadClPdf(cl.id);
+    const pdf = await getClPdf(cl.id);
     if (pdf) triggerDownload(`${cl.name}.pdf`, pdf);
   };
 
   const deleteCv = async (id: string) => {
     const ok = await withBusy(() => apiClient.deleteSavedCv(id).then(() => true), "Unable to delete CV");
-    if (ok) setCvs((prev) => prev.filter((c) => c.id !== id));
+    if (ok) {
+      cvPdfCache.current.delete(id);
+      setCvs((prev) => prev.filter((c) => c.id !== id));
+    }
   };
 
   const deleteCl = async (id: string) => {
     const ok = await withBusy(() => apiClient.deleteSavedCl(id).then(() => true), "Unable to delete cover letter");
-    if (ok) setCls((prev) => prev.filter((c) => c.id !== id));
+    if (ok) {
+      clPdfCache.current.delete(id);
+      setCls((prev) => prev.filter((c) => c.id !== id));
+    }
   };
 
   return {
@@ -100,8 +137,8 @@ export function useSavedDocs(): SavedDocsStore {
     loading,
     busy,
     error,
-    loadCvPdf,
-    loadClPdf,
+    getCvPdf,
+    getClPdf,
     downloadCv,
     downloadCl,
     deleteCv,

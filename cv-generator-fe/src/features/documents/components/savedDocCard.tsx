@@ -1,3 +1,7 @@
+import { useEffect, useState } from "react";
+
+import { Button, IconButton } from "../../../primitives/button";
+import { DownloadIcon, TrashIcon } from "../../../primitives/icons";
 import { cx } from "../../../utils/cx";
 import styles from "../documents.module.css";
 
@@ -6,6 +10,7 @@ type Props = {
   createdAt: string;
   kind: "cv" | "cl";
   busy: boolean;
+  getPdf: () => Promise<string | null>;
   onPreview: () => void;
   onDownload: () => void;
   onDelete: () => void;
@@ -23,15 +28,11 @@ export function SavedDocCard({
   createdAt,
   kind,
   busy,
+  getPdf,
   onPreview,
   onDownload,
   onDelete,
 }: Props) {
-  const handleDelete = () => {
-    if (window.confirm(`Delete "${name}"? Applications referencing it will be unlinked.`)) {
-      onDelete();
-    }
-  };
   return (
     <div className={styles.card}>
       <button
@@ -41,7 +42,7 @@ export function SavedDocCard({
         disabled={busy}
         aria-label={`Preview ${name}`}
       >
-        <MiniDoc kind={kind} />
+        <MiniPdfPreview getPdf={getPdf} title={name} />
         <span
           className={cx(
             styles.thumbBadge,
@@ -58,65 +59,57 @@ export function SavedDocCard({
         </div>
       </div>
       <div className={styles.cardActions}>
-        <button type="button" className={styles.primaryBtn} onClick={onDownload} disabled={busy}>
-          ↓ Download
-        </button>
-        <button type="button" className={styles.dangerLink} onClick={handleDelete} disabled={busy}>
-          Delete
-        </button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onDownload}
+          disabled={busy}
+          iconBefore={<DownloadIcon size={14} />}
+        >
+          Download
+        </Button>
+        <IconButton
+          tone="danger"
+          size="sm"
+          label={`Delete ${name}`}
+          onClick={onDelete}
+          disabled={busy}
+          className={styles.cardDeleteBtn}
+        >
+          <TrashIcon size={16} />
+        </IconButton>
       </div>
     </div>
   );
 }
 
-function MiniDoc({ kind }: { kind: "cv" | "cl" }) {
-  if (kind === "cv") {
-    return (
-      <div className={styles.miniDoc}>
-        <div className={styles.miniDocBanner}>
-          <div className={styles.miniDocName}>HANS K. VERI</div>
-          <div className={styles.miniDocRole}>Full-Stack Engineer</div>
-        </div>
-        <div className={styles.miniDocSection}>SUMMARY</div>
-        <div className={styles.miniDocLine} />
-        <div className={styles.miniDocLine} style={{ width: "82%" }} />
-        <div className={styles.miniDocSection}>EXPERIENCE</div>
-        <div className={styles.miniDocRow}>
-          <span className={styles.miniDocBold}>Intonate</span>
-          <span className={styles.miniDocDim}>2022–pres</span>
-        </div>
-        <div className={styles.miniDocLine} />
-        <div className={styles.miniDocLine} style={{ width: "70%" }} />
-        <div className={styles.miniDocRow}>
-          <span className={styles.miniDocBold}>Twilio</span>
-          <span className={styles.miniDocDim}>2019–22</span>
-        </div>
-        <div className={styles.miniDocLine} />
-        <div className={styles.miniDocSection}>SKILLS</div>
-        <div className={styles.miniDocLine} style={{ width: "60%" }} />
-      </div>
-    );
-  }
+function MiniPdfPreview({
+  getPdf,
+  title,
+}: {
+  getPdf: () => Promise<string | null>;
+  title: string;
+}) {
+  const [pdf, setPdf] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getPdf().then((b64) => {
+      if (!cancelled && b64) setPdf(b64);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [getPdf]);
+
+  if (!pdf) return <div className={styles.miniSkeleton} aria-hidden />;
+
+  // First-page-only PDF, hide the chrome (toolbar, sidebar, scrollbar).
+  // The iframe renders A4 at 595×842pt then we scale it to fit the thumb.
+  const src = `data:application/pdf;base64,${pdf}#toolbar=0&navpanes=0&scrollbar=0&view=Fit&page=1`;
   return (
-    <div className={styles.miniDoc}>
-      <div className={styles.miniDocBanner}>
-        <div className={styles.miniDocName}>HANS K. VERI</div>
-      </div>
-      <div className={styles.miniDocDim} style={{ marginTop: 4 }}>
-        Dear Hiring Team,
-      </div>
-      <div className={styles.miniDocLine} style={{ marginTop: 5 }} />
-      <div className={styles.miniDocLine} />
-      <div className={styles.miniDocLine} style={{ width: "85%" }} />
-      <div className={styles.miniDocLine} style={{ marginTop: 4 }} />
-      <div className={styles.miniDocLine} />
-      <div className={styles.miniDocLine} style={{ width: "70%" }} />
-      <div className={styles.miniDocDim} style={{ marginTop: 5 }}>
-        Sincerely,
-      </div>
-      <div className={styles.miniDocBold} style={{ marginTop: 2 }}>
-        Hans K. Veri
-      </div>
+    <div className={styles.miniPdfWrap} aria-hidden>
+      <iframe className={styles.miniPdfFrame} src={src} title={title} />
     </div>
   );
 }
