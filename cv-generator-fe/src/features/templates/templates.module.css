@@ -258,18 +258,7 @@
 }
 
 .selectButton {
-  composes: btnSecondary from "../../primitives/primitives.module.css";
   margin-top: auto;
-  padding: 9px 14px;
-  font-size: 0.84rem;
-}
-
-.selectButtonActive {
-  composes: btnPrimary from "../../primitives/primitives.module.css";
-  margin-top: auto;
-  padding: 9px 14px;
-  font-size: 0.84rem;
-  cursor: default;
 }
 
 .error {

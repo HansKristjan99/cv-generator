@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { Button, IconButton } from "../../../primitives/button";
-import { DownloadIcon, TrashIcon } from "../../../primitives/icons";
+import { DownloadButton, IconButton } from "../../../primitives/button";
+import { TrashIcon } from "../../../primitives/icons";
 import { cx } from "../../../utils/cx";
 import styles from "../documents.module.css";
 
@@ -59,15 +59,7 @@ export function SavedDocCard({
         </div>
       </div>
       <div className={styles.cardActions}>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={onDownload}
-          disabled={busy}
-          iconBefore={<DownloadIcon size={14} />}
-        >
-          Download
-        </Button>
+        <DownloadButton onClick={onDownload} disabled={busy} />
         <IconButton
           tone="danger"
           size="sm"

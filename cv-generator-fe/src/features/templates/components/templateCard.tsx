@@ -1,4 +1,5 @@
 import type { Template } from "../../../api/templates/getTemplates";
+import { Button } from "../../../primitives/button";
 import { cx } from "../../../utils/cx";
 import { TEMPLATE_META } from "../lib/templateMeta";
 import styles from "../templates.module.css";
@@ -35,14 +36,14 @@ export function TemplateCard({ template, isActive, saving, onSelect }: Props) {
             </div>
           </>
         ) : null}
-        <button
-          type="button"
-          className={cx(styles.selectButton, isActive && styles.selectButtonActive)}
+        <Button
+          variant={isActive ? "primary" : "secondary"}
+          className={styles.selectButton}
           onClick={onSelect}
           disabled={saving || isActive}
         >
           {isActive ? "Selected" : saving ? "Saving…" : "Use this template"}
-        </button>
+        </Button>
       </div>
     </article>
   );

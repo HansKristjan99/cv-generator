@@ -167,7 +167,7 @@
 
 .card {
   composes: card from "../../primitives/primitives.module.css";
-  padding: 12px;
+  padding: 12px 12px 8px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -207,13 +207,14 @@
 
 .miniPdfFrame {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 50%;
+  left: 50%;
   width: 595px;
   height: 842px;
   border: 0;
-  transform: scale(0.235);
-  transform-origin: top left;
+  /* Scaled slightly larger than the wrap so the PDF viewer's dark chrome
+     falls outside the clip; only the page interior remains visible. */
+  transform: translate(-50%, -50%) scale(0.26);
   pointer-events: none;
   background: #fff;
 }
@@ -289,7 +290,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0 4px 4px;
+  padding: 0 4px;
 }
 
 .cardDeleteBtn {

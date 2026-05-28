@@ -76,43 +76,6 @@
   flex-shrink: 0;
 }
 
-.actionButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-rule);
-  background: transparent;
-  color: var(--color-muted-deep);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  line-height: 1;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.actionButton:hover {
-  background: var(--color-bg-alt);
-  border-color: var(--color-panel-rule);
-  color: var(--color-ink);
-}
-
-.editBtn {
-  composes: actionButton;
-}
-
-.control {
-  composes: actionButton;
-  width: 30px;
-  font-size: 0.85rem;
-}
-
 .body {
   flex: 1;
   min-height: 0;
@@ -164,7 +127,3 @@
   background: var(--color-card);
 }
 
-.download {
-  composes: actionButton;
-  text-decoration: none;
-}

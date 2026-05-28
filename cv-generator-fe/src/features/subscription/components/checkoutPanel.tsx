@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 
+import { Button } from "../../../primitives/button";
 import { stripePromise } from "../lib/stripe";
 import styles from "../subscription.module.css";
 
@@ -21,9 +22,9 @@ export function CheckoutPanel({ clientSecret, checkoutSessionId, onCancel, onCom
     <section className={styles.checkout}>
       <div className={styles.checkoutHead}>
         <h2 className={styles.checkoutTitle}>Complete your subscription</h2>
-        <button type="button" className={styles.backButton} onClick={onCancel}>
+        <Button size="sm" onClick={onCancel}>
           Back
-        </button>
+        </Button>
       </div>
       <div className={styles.checkoutBody}>
         <EmbeddedCheckoutProvider

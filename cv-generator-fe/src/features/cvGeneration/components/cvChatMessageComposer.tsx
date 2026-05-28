@@ -5,6 +5,7 @@ import {
   setDraftMessage,
 } from "../cvGenerationSlice";
 import { useAppDispatch, useAppSelector } from "../../../hooks";
+import { Button } from "../../../primitives/button";
 import styles from "./cvChatMessageComposer.module.css";
 
 const PROMPT_CHIPS = [
@@ -84,9 +85,9 @@ export const CvChatMessageComposer = () => {
           maxLength={MAX_USER_MESSAGE_CHARS}
           disabled={atLimit}
         />
-        <button type="button" className={styles.send} onClick={onSend} disabled={disabled}>
+        <Button variant="primary" onClick={onSend} disabled={disabled}>
           Send
-        </button>
+        </Button>
       </div>
       {!atLimit && messagesRemaining <= 3 ? (
         <p className={styles.limitNote}>
