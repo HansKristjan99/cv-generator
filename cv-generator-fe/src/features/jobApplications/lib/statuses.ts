@@ -30,6 +30,40 @@ export function statusTone(status: string): StatusTone {
 
 const ACRONYMS = new Set(["cv", "cl"]);
 
+export type Stage = "saved" | "applied" | "interviewing" | "offer" | "closed";
+
+export type StageDef = {
+  id: Stage;
+  label: string;
+  subtitle: string;
+  tone: StatusTone;
+  defaultStatus: string;
+};
+
+export const STAGES: StageDef[] = [
+  { id: "saved", label: "Saved", subtitle: "leads & wishlists", tone: "neutral", defaultStatus: "initial" },
+  { id: "applied", label: "Applied", subtitle: "awaiting reply", tone: "sky", defaultStatus: "cv_submitted" },
+  { id: "interviewing", label: "Interviewing", subtitle: "active processes", tone: "mint", defaultStatus: "interview" },
+  { id: "offer", label: "Offer", subtitle: "celebrate when ready", tone: "primary", defaultStatus: "offer" },
+  { id: "closed", label: "Closed", subtitle: "rejected / withdrawn", tone: "danger", defaultStatus: "rejected" },
+];
+
+const STAGE_BY_STATUS: Record<string, Stage> = {
+  initial: "saved",
+  cv_submitted: "applied",
+  phone_screen: "interviewing",
+  interview: "interviewing",
+  final_interview: "interviewing",
+  offer: "offer",
+  hired: "offer",
+  rejected: "closed",
+  withdrawn: "closed",
+};
+
+export function stageForStatus(status: string): Stage {
+  return STAGE_BY_STATUS[status] ?? "saved";
+}
+
 export function statusLabel(status: string): string {
   // "phone_screen" -> "Phone screen"; "cv_submitted" -> "CV submitted"
   const trimmed = status.trim();

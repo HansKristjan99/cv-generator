@@ -1,8 +1,8 @@
 .page {
   width: 100%;
-  max-width: 1180px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 40px 56px 56px;
+  padding: 32px 40px 40px;
 }
 
 .header {
@@ -110,73 +110,202 @@
   color: var(--color-muted);
 }
 
-/* ---- Application grid ---- */
-.grid {
+/* ---- Kanban board ---- */
+.board {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-5);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: stretch;
 }
 
-.card {
+.column {
   composes: card from "../../primitives/primitives.module.css";
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: 18px 20px 16px;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
+  gap: 8px;
+  min-height: 320px;
+  transition: outline-color 0.15s ease, background 0.15s ease;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
 }
 
-.card:hover {
-  border-color: var(--color-panel-rule);
-  box-shadow: 0 0 0 3px var(--color-mint), var(--shadow-card);
+.columnDropHover {
+  outline-color: var(--color-primary);
+  background: var(--color-bg-alt);
 }
 
-.cardHead {
+.columnHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  padding: 0 4px;
 }
 
-.cardTitle {
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 1.05rem;
-  color: var(--color-ink);
-  line-height: 1.2;
-  flex: 1;
+.columnLabel {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
-.cardDescription {
-  margin: 0;
-  font-size: 0.84rem;
-  line-height: 1.5;
+.columnLabel_neutral {
+  background: var(--color-bg-alt);
   color: var(--color-muted-deep);
 }
 
-.cardTags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
+.columnLabel_sky {
+  background: var(--color-sky);
+  color: var(--color-sky-ink-deep);
 }
 
-.tag {
-  composes: chip from "../../primitives/primitives.module.css";
+.columnLabel_mint {
+  background: var(--color-mint);
+  color: var(--color-mint-ink-deep);
+}
+
+.columnLabel_primary {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.columnLabel_danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.columnCount {
   font-size: 0.72rem;
-  padding: 3px 9px;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
 }
 
-.cardFooter {
-  margin: 0;
-  font-size: 0.75rem;
+.columnSub {
+  padding: 0 4px;
+  font-size: 0.7rem;
   color: var(--color-muted);
+  font-family: var(--font-display);
+  font-style: italic;
+  margin-top: -4px;
+}
+
+.columnBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+
+.columnEmpty {
+  border: 1px dashed var(--color-rule);
+  border-radius: 10px;
+  background: var(--color-bg-alt);
+  padding: 14px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+.kanbanCard {
+  background: #fff;
+  border: 1px solid var(--color-rule);
+  border-radius: 10px;
+  padding: 11px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: grab;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kanbanCard:hover {
+  border-color: var(--color-panel-rule);
+  box-shadow: var(--shadow-sm);
+}
+
+.kanbanCard:active {
+  cursor: grabbing;
+}
+
+.kanbanHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kanbanIdentity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.kanbanCompany {
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.kanbanRole {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kanbanMark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--color-bg-alt);
+  color: var(--color-muted-deep);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
+}
+
+.kanbanFoot {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tagMint {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--color-mint);
+  color: var(--color-mint-ink-deep);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.kanbanDate {
+  margin-left: auto;
+  font-size: 0.66rem;
+  color: var(--color-muted);
+  font-family: var(--font-display);
+  font-style: italic;
 }
 
 /* ---- Status pills ---- */
@@ -335,7 +464,7 @@
 
 .modal {
   composes: card from "../../primitives/primitives.module.css";
-  width: min(640px, 100%);
+  width: min(720px, 100%);
   max-height: calc(100vh - 80px);
   overflow-y: auto;
   padding: var(--space-8);
@@ -369,6 +498,12 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   flex: 1;
+  white-space: nowrap;
+}
+
+.label .input,
+.label .textarea {
+  white-space: normal;
 }
 
 .input,
@@ -487,6 +622,12 @@
   background: var(--color-danger-soft);
 }
 
+@media (max-width: 1200px) {
+  .board {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .page {
     padding: 28px 24px 40px;
@@ -496,7 +637,7 @@
     flex-direction: column;
   }
 
-  .grid {
+  .board {
     grid-template-columns: 1fr;
   }
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { DocumentsHeader } from "./components/documentsHeader";
+import { DocumentsHeader, type DocsTab } from "./components/documentsHeader";
 import { PdfPreviewModal } from "./components/pdfPreviewModal";
 import { SavedDocCard } from "./components/savedDocCard";
 import { useSavedDocs } from "./hooks/useSavedDocs";
@@ -28,6 +28,7 @@ export function DocumentsPage() {
     deleteCl,
   } = useSavedDocs();
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  const [tab, setTab] = useState<DocsTab>("all");
 
   const openPreview = async (kind: "cv" | "cl", id: string, name: string) => {
     setPreview({ kind, id, name, pdf: null });
@@ -48,10 +49,17 @@ export function DocumentsPage() {
   }
 
   const isEmpty = cvs.length === 0 && cls.length === 0;
+  const showCvs = tab === "all" || tab === "cv";
+  const showCls = tab === "all" || tab === "cl";
 
   return (
     <main className={styles.page}>
-      <DocumentsHeader cvCount={cvs.length} clCount={cls.length} />
+      <DocumentsHeader
+        cvCount={cvs.length}
+        clCount={cls.length}
+        tab={tab}
+        onTabChange={setTab}
+      />
       {error ? <p className={styles.error}>{error}</p> : null}
 
       {isEmpty ? (
@@ -64,16 +72,16 @@ export function DocumentsPage() {
         </section>
       ) : null}
 
-      {cvs.length > 0 ? (
+      {showCvs && cvs.length > 0 ? (
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>CVs</h2>
+          {tab === "all" ? <h2 className={styles.sectionTitle}>CVs</h2> : null}
           <div className={styles.grid}>
             {cvs.map((cv) => (
               <SavedDocCard
                 key={cv.id}
                 name={cv.name}
                 createdAt={cv.created_at}
-                badge="CV"
+                kind="cv"
                 busy={busy}
                 onPreview={() => openPreview("cv", cv.id, cv.name)}
                 onDownload={() => downloadCv(cv)}
@@ -84,16 +92,16 @@ export function DocumentsPage() {
         </section>
       ) : null}
 
-      {cls.length > 0 ? (
+      {showCls && cls.length > 0 ? (
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Cover letters</h2>
+          {tab === "all" ? <h2 className={styles.sectionTitle}>Cover letters</h2> : null}
           <div className={styles.grid}>
             {cls.map((cl) => (
               <SavedDocCard
                 key={cl.id}
                 name={cl.name}
                 createdAt={cl.created_at}
-                badge="CL"
+                kind="cl"
                 busy={busy}
                 onPreview={() => openPreview("cl", cl.id, cl.name)}
                 onDownload={() => downloadCl(cl)}

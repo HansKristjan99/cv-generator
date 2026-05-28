@@ -225,6 +225,9 @@ class Cv(Base):
     template_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("templates.id", ondelete="SET NULL"), nullable=True
     )
+    # Cached PDF rendering (base64). Populated on first compile and reused
+    # to skip the slow structured-data -> LaTeX -> PDF pipeline on re-views.
+    pdf_base64: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -245,6 +248,7 @@ class Cl(Base):
     structured_data: Mapped[dict] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"), nullable=False
     )
+    pdf_base64: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

@@ -6,7 +6,83 @@
 }
 
 .header {
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.tabsRow {
+  display: flex;
+  gap: 4px;
+  margin-top: var(--space-5);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.tab {
+  background: transparent;
+  border: 0;
+  margin-bottom: -1px;
+  padding: 10px 14px 12px 4px;
+  border-bottom: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--color-muted-deep);
+}
+
+.tabLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.tabActive {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-ink);
+}
+
+.tabActive .tabLabel {
+  font-weight: 600;
+}
+
+.tabCount {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--color-bg-alt);
+  color: var(--color-muted);
+}
+
+.tabCountMint {
+  background: var(--color-mint);
+  color: var(--color-mint-ink-deep);
+}
+
+.tabCountSky {
+  background: var(--color-sky);
+  color: var(--color-sky-ink-deep);
 }
 
 .breadcrumb {
@@ -85,50 +161,159 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-5);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
 .card {
   composes: card from "../../primitives/primitives.module.css";
-  padding: 18px 20px 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  min-height: 150px;
+  gap: 10px;
 }
 
-.cardHead {
+.thumb {
+  position: relative;
+  background: var(--color-bg-alt);
+  border: 0;
+  border-radius: 10px;
+  padding: 14px;
+  height: 200px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
+  cursor: pointer;
+  transition: filter 0.15s ease;
 }
 
-.cardBadge {
-  composes: pillMint from "../../primitives/primitives.module.css";
-  font-size: 0.7rem;
+.thumb:hover:not(:disabled) {
+  filter: brightness(0.97);
 }
 
-.cardDate {
-  font-size: 0.75rem;
-  color: var(--color-muted);
+.thumbBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.thumbBadgeMint {
+  background: var(--color-mint);
+  color: var(--color-mint-ink-deep);
+}
+
+.thumbBadgeSky {
+  background: var(--color-sky);
+  color: var(--color-sky-ink-deep);
+}
+
+.cardMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 4px;
 }
 
 .cardTitle {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--color-ink);
-  word-break: break-word;
-  flex: 1;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardSub {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.72rem;
+  color: var(--color-muted);
 }
 
 .cardActions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  flex-wrap: wrap;
+  padding: 0 4px 4px;
+}
+
+/* ---- Mini paper preview ---- */
+.miniDoc {
+  width: 140px;
+  height: 180px;
+  background: #fff;
+  border: 1px solid var(--color-rule);
+  border-radius: 2px;
+  padding: 10px 12px;
+  font-family: var(--font-doc);
+  color: #1a1812;
+  font-size: 4.5px;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.miniDocBanner {
+  background: #eeece5;
+  margin: -10px -12px 6px;
+  padding: 6px;
+  text-align: center;
+}
+
+.miniDocName {
+  font-weight: 600;
+  font-size: 6.5px;
+  letter-spacing: 0.08em;
+}
+
+.miniDocRole {
+  font-size: 4px;
+  color: #5e5a4a;
+  margin-top: 1px;
+}
+
+.miniDocSection {
+  font-weight: 700;
+  font-size: 4.5px;
+  letter-spacing: 0.16em;
+  border-bottom: 1px solid #d8d2c0;
+  padding-bottom: 1px;
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
+.miniDocLine {
+  height: 1px;
+  background: #d8d2c0;
+  width: 100%;
+  margin: 2px 0;
+}
+
+.miniDocRow {
+  display: flex;
+  justify-content: space-between;
+  color: #3a3326;
+  margin-top: 2px;
+}
+
+.miniDocBold {
+  font-weight: 700;
+  color: #1a1812;
+}
+
+.miniDocDim {
+  color: #9a9080;
 }
 
 .primaryBtn {
@@ -245,7 +430,13 @@
   font-size: 0.9rem;
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1200px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
