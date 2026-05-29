@@ -6,7 +6,6 @@ focused on routing/DTOs only.
 
 from __future__ import annotations
 
-import base64
 import logging
 import uuid
 from pathlib import Path
@@ -21,9 +20,8 @@ from app.db import SessionLocal
 from app.models import CvSession, Message, User
 from app.schemas import CoverLetter, CurriculumVitae, OtherMessage, RequirementsAnalysis
 from app.schemas.requirements import format_requirements, unmet_must_haves
-from app.services.latex import compile_latex_to_pdf, cover_letter_to_latex, cv_to_latex
-from app.services.latex_escape import escape_cover_letter_for_latex, escape_cv_for_latex
 from app.services.openai_client import OpenAIClient
+from app.services.rendering import render_cover_letter, render_cv
 from app.services.user_data import format_user_data, update_user_memory
 
 logger = logging.getLogger(__name__)
@@ -145,15 +143,10 @@ def _run_writer(
         ), content
 
     assert isinstance(content, CurriculumVitae)
-    escaped = escape_cv_for_latex(content)
-    latex = cv_to_latex(escaped, template_slug)
-    compiled = compile_latex_to_pdf(latex)
-    if not compiled.success:
-        logger.error("CV compilation failed: %s", compiled.error)
-    pdf_b64 = base64.b64encode(compiled.pdf_bytes).decode() if compiled.pdf_bytes else ""
+    rendered = render_cv(content, template_slug)
     logger.info(
         "WriterAgent CV compiled: success=%s page_count=%d required=%d",
-        compiled.success, compiled.page_count, page_count,
+        rendered.success, rendered.page_count, page_count,
     )
 
     return PipelineResult(
@@ -161,8 +154,8 @@ def _run_writer(
         asst_message={
             "role": "assistant",
             "type": "cv",
-            "content": latex,
-            "pdf_base64": pdf_b64,
+            "content": rendered.latex,
+            "pdf_base64": rendered.pdf_base64,
             "structured_data": content.model_dump(),
         },
     ), content
@@ -189,14 +182,10 @@ def _run_cover_letter(
         )
 
     assert isinstance(content, CoverLetter)
-    latex = cover_letter_to_latex(escape_cover_letter_for_latex(content))
-    compiled = compile_latex_to_pdf(latex)
-    if not compiled.success:
-        logger.error("Cover-letter compilation failed: %s", compiled.error)
-    pdf_b64 = base64.b64encode(compiled.pdf_bytes).decode() if compiled.pdf_bytes else ""
+    rendered = render_cover_letter(content)
     logger.info(
         "CoverLetterAgent compiled: success=%s page_count=%d",
-        compiled.success, compiled.page_count,
+        rendered.success, rendered.page_count,
     )
 
     return PipelineResult(
@@ -204,8 +193,8 @@ def _run_cover_letter(
         asst_message={
             "role": "assistant",
             "type": "cover_letter",
-            "content": latex,
-            "pdf_base64": pdf_b64,
+            "content": rendered.latex,
+            "pdf_base64": rendered.pdf_base64,
             "structured_data": content.model_dump(),
         },
     )
