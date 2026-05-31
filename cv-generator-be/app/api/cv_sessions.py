@@ -4,10 +4,10 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi.params import Depends
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import (
@@ -20,14 +20,11 @@ from app.db import get_db
 from app.models import CvSession, Message
 from app.schemas import QuestionToImproveCv
 from app.services.auth import CurrentUser
+from app.services.quota import invents_used, sessions_used
+from app.services.sessions import get_user_session, latest_document
 from app.services.subscriptions import has_paid_access
 
 router = APIRouter(prefix="/cv", tags=["cv"])
-
-
-def _month_start() -> datetime:
-    now = datetime.utcnow()
-    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
 class SessionSummary(BaseModel):
@@ -90,43 +87,16 @@ def get_session_messages(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> LoadConversationResponse:
-    cv_session = db.scalar(
-        select(CvSession).where(
-            CvSession.id == session_id, CvSession.user_id == current_user.id,
-        )
-    )
-    if cv_session is None:
-        raise HTTPException(404, "Conversation not found.")
+    cv_session = get_user_session(db, session_id, current_user.id)
 
     msgs = db.scalars(
         select(Message).where(Message.cv_session_id == cv_session.id).order_by(Message.created_at)
     ).all()
 
-    latest_cv_pdf_base64: str | None = None
-    latest_cover_letter_pdf_base64: str | None = None
-    latest_cv_structured: dict | None = None
-    latest_cover_letter_structured: dict | None = None
-    for m in reversed(msgs):
-        if m.role != "assistant":
-            continue
-        m_type = m.content.get("type")
-        if m_type == "cv":
-            if latest_cv_pdf_base64 is None:
-                latest_cv_pdf_base64 = m.content.get("pdf_base64") or None
-            if latest_cv_structured is None:
-                latest_cv_structured = m.content.get("structured_data") or None
-        elif m_type == "cover_letter":
-            if latest_cover_letter_pdf_base64 is None:
-                latest_cover_letter_pdf_base64 = m.content.get("pdf_base64") or None
-            if latest_cover_letter_structured is None:
-                latest_cover_letter_structured = m.content.get("structured_data") or None
-        if (
-            latest_cv_pdf_base64 is not None
-            and latest_cover_letter_pdf_base64 is not None
-            and latest_cv_structured is not None
-            and latest_cover_letter_structured is not None
-        ):
-            break
+    latest_cv = latest_document(db, cv_session.id, "cv")
+    latest_cl = latest_document(db, cv_session.id, "cover_letter")
+    latest_cv_structured, latest_cv_pdf_base64 = latest_cv or (None, None)
+    latest_cover_letter_structured, latest_cover_letter_pdf_base64 = latest_cl or (None, None)
 
     messages = [
         ChatMessageResponse(
@@ -166,22 +136,11 @@ class CvQuota(BaseModel):
 @router.get("/quota", response_model=CvQuota)
 def get_quota(user: CurrentUser, db: Annotated[Session, Depends(get_db)]) -> dict:
     paid_access = has_paid_access(db, user)
-    month = _month_start()
-    sessions_used = db.scalar(
-        select(func.count(CvSession.id)).where(
-            CvSession.user_id == user.id, CvSession.created_at >= month
-        )
-    ) or 0
-    invents_used = db.scalar(
-        select(func.sum(CvSession.invent_count)).where(
-            CvSession.user_id == user.id, CvSession.created_at >= month
-        )
-    ) or 0
     return {
-        "sessions_used": sessions_used,
+        "sessions_used": sessions_used(db, user.id),
         "sessions_limit": None if paid_access else MAX_SESSIONS_PER_MONTH,
         "messages_limit": None if paid_access else MAX_MESSAGES_PER_SESSION,
-        "invents_used": invents_used,
+        "invents_used": invents_used(db, user.id),
         "invents_limit": None if paid_access else MAX_INVENTS_PER_MONTH,
         "is_unlimited": paid_access,
     }
