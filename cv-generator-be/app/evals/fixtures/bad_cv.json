@@ -1,0 +1,52 @@
+{
+  "cv": {
+    "name": "Hans Kristjan Veri",
+    "location": "Z\u00fcrich, Switzerland",
+    "email": "hans.kristjan.veri@gmail.com",
+    "phone": null,
+    "links": [],
+    "summary": "Engineer who raised onboarding completion from 50 to 90 percent and writes clean code.",
+    "experience": [
+      {
+        "company": "Intonate GmbH",
+        "location": "Z\u00fcrich, Switzerland",
+        "position": "Software Engineer",
+        "start_date": "Oct 2025",
+        "end_date": "Present",
+        "bullets": [
+          "Responsible for various frontend and backend tasks on the platform.",
+          "Improved onboarding completion from 50 to 90 percent for enterprise users."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "institution": "University of Tartu",
+        "location": "Tartu, Estonia",
+        "degree": "M.Sc. in Computer Science",
+        "start_date": "Sep 2023",
+        "end_date": "Jun 2025",
+        "gpa": null,
+        "thesis": null,
+        "coursework": null
+      }
+    ],
+    "skills": [
+      {
+        "title": "Languages",
+        "items": "TypeScript, Rust, Scala"
+      },
+      {
+        "title": "Tools & Practices",
+        "items": "Agile, Communication"
+      }
+    ],
+    "projects": [],
+    "awards": []
+  },
+  "compile_success": true,
+  "page_count": 2,
+  "metadata": {
+    "source": "fixture"
+  }
+}

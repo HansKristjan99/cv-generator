@@ -1,0 +1,74 @@
+{
+  "cv": {
+    "name": "Hans Kristjan Veri",
+    "location": "Z\u00fcrich, Switzerland (EU citizen)",
+    "email": "hans.kristjan.veri@gmail.com",
+    "phone": "+41 78 346 33 03",
+    "links": [
+      "https://github.com/hanskristjan99"
+    ],
+    "summary": "Full-stack engineer specializing in TypeScript and Python services with a background in applied cryptography. Builds secure, production web platforms end to end.",
+    "experience": [
+      {
+        "company": "Intonate GmbH",
+        "location": "Z\u00fcrich, Switzerland",
+        "position": "Software Engineer (Full-Stack)",
+        "start_date": "Oct 2025",
+        "end_date": "Present",
+        "bullets": [
+          "Owned end-to-end delivery for a B2B SaaS platform serving 2,000+ daily sessions across TypeScript and Python services.",
+          "Built secure REST and GraphQL APIs on AWS Lambda with OAuth 2.0/OIDC access control across API Gateway and S3.",
+          "Rebuilt onboarding into a guided single-page flow, raising completion from 50 to 90 percent."
+        ]
+      },
+      {
+        "company": "Twilio",
+        "location": "Tallinn, Estonia",
+        "position": "Software Engineer (Front-End)",
+        "start_date": "Sep 2024",
+        "end_date": "Oct 2025",
+        "bullets": [
+          "Built core React features for Twilio Flex used by thousands of enterprise customers.",
+          "Introduced a strictly-typed component library and Kubernetes-based end-to-end tests in CI/CD, cutting regressions."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "institution": "University of Tartu",
+        "location": "Tartu, Estonia",
+        "degree": "M.Sc. in Computer Science, summa cum laude",
+        "start_date": "Sep 2023",
+        "end_date": "Jun 2025",
+        "gpa": null,
+        "thesis": "Post-quantum threshold signatures",
+        "coursework": "Distributed Systems, Advanced Algorithms"
+      }
+    ],
+    "skills": [
+      {
+        "title": "Languages",
+        "items": "TypeScript, Python"
+      },
+      {
+        "title": "Frontend & UI",
+        "items": "React, component library"
+      },
+      {
+        "title": "Backend & APIs",
+        "items": "REST, GraphQL, AWS Lambda"
+      },
+      {
+        "title": "Infrastructure & DevOps",
+        "items": "Kubernetes, CI/CD, OAuth 2.0/OIDC"
+      }
+    ],
+    "projects": [],
+    "awards": []
+  },
+  "compile_success": true,
+  "page_count": 1,
+  "metadata": {
+    "source": "fixture"
+  }
+}

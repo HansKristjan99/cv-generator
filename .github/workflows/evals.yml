@@ -1,0 +1,72 @@
+name: evals
+
+# CV-quality eval harness.
+#
+# Two layers, by design (see cv-generator-be/app/evals/README.md):
+#   * deterministic — objective, hermetic checks (no network, no API key, no LaTeX).
+#     Runs on EVERY push/PR and gates the build. Free and fast.
+#   * live — regenerates CVs with the real model and runs the LLM judge. Paid and
+#     non-deterministic, so it is NOT in the per-push blocking path: it runs on a
+#     nightly schedule and on manual dispatch, and uploads a report artifact.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *" # nightly live eval
+
+defaults:
+  run:
+    working-directory: cv-generator-be
+
+jobs:
+  deterministic:
+    name: deterministic evals (every push)
+    runs-on: ubuntu-latest
+    env:
+      # app.config builds a Settings() singleton at import; give it a dummy DSN.
+      # No OPENAI_API_KEY is needed — the deterministic path never calls the API.
+      DATABASE_URL: postgresql+psycopg://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync
+      - name: Run hermetic eval-harness tests
+        run: uv run pytest app/tests/test_evals.py -v
+
+  live:
+    name: live eval (nightly + manual)
+    needs: deterministic
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+psycopg://ci:ci@localhost:5432/ci
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      # Optionally point the judge at a stronger/independent model than the generator.
+      EVAL_JUDGE_MODEL: ${{ vars.EVAL_JUDGE_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - name: Install LaTeX toolchain (for real PDF compilation)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base texlive-latex-recommended texlive-fonts-recommended
+      - name: Install dependencies
+        run: uv sync
+      - name: Run full eval (generate + deterministic + LLM judge)
+        run: uv run python -m app.evals.runner --generator writer --out eval-report
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: cv-generator-be/eval-report

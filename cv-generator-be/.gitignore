@@ -14,3 +14,7 @@ app/.env
 
 # CDK build output
 infra/cdk.out/
+
+# Eval harness output (generated reports)
+eval-report/
+app/evals/eval-report/
