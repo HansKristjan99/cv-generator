@@ -15,11 +15,11 @@ export AWS_PROFILE="$aws_profile"
 export AWS_DEFAULT_REGION="$aws_region"
 export AWS_REGION="$aws_region"
 
-uv sync
-uv run cdk synth --profile "$aws_profile"
-uv run cdk diff --profile "$aws_profile" \
+uv sync --all-packages
+uv run --no-sync cdk synth --profile "$aws_profile"
+uv run --no-sync cdk diff --profile "$aws_profile" \
   --parameters "FrontendUrl=$frontend_url" \
   --parameters "StripeProPriceId=$product_id"
-uv run cdk deploy --profile "$aws_profile" \
+uv run --no-sync cdk deploy --profile "$aws_profile" \
   --parameters "FrontendUrl=$frontend_url" \
   --parameters "StripeProPriceId=$product_id"

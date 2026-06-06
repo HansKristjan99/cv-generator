@@ -9,14 +9,34 @@ Secrets Manager placeholders.
 Deploy with the live Stripe Price ID and frontend URL:
 
 ```bash
-cd cv-generator-be/infra
-cdk deploy \
-  --parameters FrontendUrl=https://hireable.vericodehq.com \
-  --parameters StripeProPriceId=price_live_xxx
+cd cv-generator-be
+./scripts/deploy.sh
 ```
 
 The service runs Alembic before starting Uvicorn, so deploying the backend
 applies the `subscriptions` migration automatically.
+
+The deploy wrapper accepts these optional environment variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `AWS_PROFILE` | `hans-admin` | AWS CLI profile used for deployment |
+| `AWS_REGION` | `eu-north-1` | AWS region used for deployment |
+| `FRONTEND_URL` | `https://hireable.vericodehq.com` | Frontend origin used for auth and Stripe return URLs |
+| `PRODUCT_ID` | Live Pro price | Stripe recurring Price ID |
+
+## Cost reduction rollout
+
+The stack keeps the public ALB but removes the NAT Gateway. The API task runs in
+public subnets with a public IP for outbound access; its security group still
+accepts port `8000` traffic only from the ALB. RDS remains private on a
+protected `db.t4g.micro` Postgres instance with 20 GiB of gp3 storage and seven
+days of backups.
+
+Check `/health`, ALB target health, sign-in, and a representative three-page PDF
+generation after the deployment. The API task is intentionally trialing
+`0.25 vCPU / 0.5 GiB`; revert it to `0.5 vCPU / 1 GiB` if rendering becomes
+unreliable.
 
 ## Required Secrets Manager values
 

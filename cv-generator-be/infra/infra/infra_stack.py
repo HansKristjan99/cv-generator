@@ -1,10 +1,10 @@
 from pathlib import Path
 
 from aws_cdk import (
-    CfnOutput,
     CfnParameter,
     Duration,
     Fn,
+    IgnoreMode,
     RemovalPolicy,
     SecretValue,
     Stack,
@@ -24,6 +24,7 @@ class CvGeneratorBeStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         repo_root = Path(__file__).resolve().parents[2]
+        docker_excludes = (repo_root / ".dockerignore").read_text().splitlines()
         frontend_url = CfnParameter(
             self,
             "FrontendUrl",
@@ -43,7 +44,17 @@ class CvGeneratorBeStack(Stack):
             self,
             "Vpc",
             max_azs=2,
-            nat_gateways=1,
+            nat_gateways=0,
+            subnet_configuration=[
+                ec2.SubnetConfiguration(
+                    name="Public",
+                    subnet_type=ec2.SubnetType.PUBLIC,
+                ),
+                ec2.SubnetConfiguration(
+                    name="Private",
+                    subnet_type=ec2.SubnetType.PRIVATE_ISOLATED,
+                ),
+            ],
         )
 
         # Security group for ECS Fargate tasks
@@ -63,52 +74,46 @@ class CvGeneratorBeStack(Stack):
         )
         rds_sg.add_ingress_rule(ecs_sg, ec2.Port.tcp(5432))
 
-        cloudshell_sg = ec2.SecurityGroup(
+        database_secret = rds.DatabaseSecret(
             self,
-            "CloudShellSg",
-            vpc=vpc,
-            description="CloudShell access to RDS for manual queries",
+            "DatabaseSecret",
+            username="cvapp",
+        )
+        database_secret.apply_removal_policy(RemovalPolicy.RETAIN)
+        secret_resource = database_secret.node.default_child
+        assert isinstance(secret_resource, secretsmanager.CfnSecret)
+        # Keep the password secret created with the original database.
+        secret_resource.override_logical_id(
+            "CvGeneratorBeStackDatabaseSecret9E01CE843fdaad7efa858a3daf9490cf0a702aeb"
         )
 
-        rds_sg.add_ingress_rule(
-            cloudshell_sg,
-            ec2.Port.tcp(5432),
-            "Allow CloudShell to connect to PostgreSQL",
-        )
-
-        # RDS PostgreSQL 16 — credentials are auto-generated in Secrets Manager
         db = rds.DatabaseInstance(
             self,
-            "Database",
+            "DatabaseV2",
             engine=rds.DatabaseInstanceEngine.postgres(
                 version=rds.PostgresEngineVersion.VER_16
             ),
             instance_type=ec2.InstanceType.of(
-                ec2.InstanceClass.T3, ec2.InstanceSize.MICRO
+                ec2.InstanceClass.T4G, ec2.InstanceSize.MICRO
             ),
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(
-                subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
             ),
             security_groups=[rds_sg],
-            credentials=rds.Credentials.from_generated_secret("cvapp"),
+            credentials=rds.Credentials.from_password(
+                "cvapp",
+                database_secret.secret_value_from_json("password"),
+            ),
             database_name="cvapp",
-            removal_policy=RemovalPolicy.DESTROY,
-            deletion_protection=False,
+            allocated_storage=20,
+            storage_type=rds.StorageType.GP3,
+            removal_policy=RemovalPolicy.SNAPSHOT,
+            deletion_protection=True,
             storage_encrypted=True,
-            backup_retention=Duration.days(0),
+            backup_retention=Duration.days(7),
             multi_az=False,
         )
-
-        CfnOutput(
-            self,
-            "CloudShellSecurityGroupId",
-            value=cloudshell_sg.security_group_id,
-        )
-
-       
-
-        assert db.secret is not None, "RDS secret must exist when using from_generated_secret"
 
         # Placeholder secrets for external service keys.
         # Update these in the AWS Secrets Manager console before the app can
@@ -172,11 +177,17 @@ class CvGeneratorBeStack(Stack):
             self,
             "ApiService",
             cluster=cluster,
-            cpu=512,
-            memory_limit_mib=1024,
+            cpu=256,
+            memory_limit_mib=512,
             desired_count=1,
+            assign_public_ip=True,
+            task_subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PUBLIC
+            ),
             public_load_balancer=True,
             security_groups=[ecs_sg],
+            circuit_breaker=ecs.DeploymentCircuitBreaker(rollback=True),
+            min_healthy_percent=100,
             # Give the container time to run Alembic migrations before the
             # load balancer starts health-checking it.
             health_check_grace_period=Duration.seconds(120),
@@ -184,6 +195,8 @@ class CvGeneratorBeStack(Stack):
                 image=ecs.ContainerImage.from_asset(
                     str(repo_root),
                     platform=ecr_assets.Platform.LINUX_AMD64,
+                    exclude=docker_excludes,
+                    ignore_mode=IgnoreMode.DOCKER,
                 ),
                 container_port=8000,
                 # Run DB migrations before starting the server so the schema is
@@ -212,7 +225,7 @@ class CvGeneratorBeStack(Stack):
                 },
                 secrets={
                     "DB_PASSWORD": ecs.Secret.from_secrets_manager(
-                        db.secret, "password"
+                        database_secret, "password"
                     ),
                     "CLERK_SECRET_KEY": ecs.Secret.from_secrets_manager(
                         clerk_secret_key
@@ -244,16 +257,4 @@ class CvGeneratorBeStack(Stack):
         scaling.scale_on_cpu_utilization(
             "CpuScaling",
             target_utilization_percent=60,
-        )
-
-        CfnOutput(
-            self,
-            "LoadBalancerDNS",
-            value=service.load_balancer.load_balancer_dns_name,
-        )
-
-        CfnOutput(
-            self,
-            "DatabaseEndpoint",
-            value=db.db_instance_endpoint_address,
         )
