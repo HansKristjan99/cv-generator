@@ -2,48 +2,25 @@
 
 import logging
 import uuid
-from datetime import datetime
 from typing import Annotated
 
 import openai
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.agents.invent import InventAgent
-from app.config import (
-    MAX_INVENT_QUESTIONS,
-    MAX_INVENTS_PER_MONTH,
-    MODEL,
-)
+from app.config import MAX_INVENT_QUESTIONS, MODEL
 from app.db import get_db
-from app.models import CvSession, User
 from app.schemas import QuestionToImproveCv
 from app.services.auth import CurrentUser
 from app.services.openai_client import OpenAIClient
-from app.services.subscriptions import has_paid_access
+from app.services.quota import ensure_invent_available
+from app.services.sessions import get_user_session
 from app.services.user_data import format_user_data
 
 router = APIRouter(prefix="/cv", tags=["cv"])
 logger = logging.getLogger(__name__)
-
-
-def _month_start() -> datetime:
-    now = datetime.utcnow()
-    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-
-def _check_invent_available(user: User, db: Session) -> None:
-    if has_paid_access(db, user):
-        return
-    total = db.scalar(
-        select(func.sum(CvSession.invent_count)).where(
-            CvSession.user_id == user.id, CvSession.created_at >= _month_start(),
-        )
-    ) or 0
-    if total >= MAX_INVENTS_PER_MONTH:
-        raise HTTPException(429, f"Monthly limit of {MAX_INVENTS_PER_MONTH} CV enhancements reached.")
 
 
 class InventCvRequest(BaseModel):
@@ -71,17 +48,12 @@ def invent_cv(
     if len(payload.questions) > MAX_INVENT_QUESTIONS:
         raise HTTPException(422, f"Maximum {MAX_INVENT_QUESTIONS} questions per request.")
 
-    cv_session = db.scalar(
-        select(CvSession).where(
-            CvSession.id == payload.session_id,
-            CvSession.user_id == current_user.id,
-        )
+    cv_session = get_user_session(
+        db, payload.session_id, current_user.id, not_found="Unknown or expired conversation."
     )
-    if cv_session is None:
-        raise HTTPException(404, "Unknown or expired conversation.")
     if not cv_session.job_description:
         raise HTTPException(409, "This conversation does not have a stored job description.")
-    _check_invent_available(current_user, db)
+    ensure_invent_available(db, current_user)
 
     client = OpenAIClient(MODEL)
     # The requirements gate asks clarifying questions before any writer run, so the

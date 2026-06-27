@@ -1,19 +1,15 @@
 """Job applications: saved CV/CL snapshots and per-user application tracker."""
 
-import base64
 import logging
 import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import DEFAULT_TEMPLATE_SLUG
 from app.db import get_db
-from app.models import Cl, Cv, CvSession, JobApplication, Message, Template, User
-from app.schemas import CoverLetter, CurriculumVitae
+from app.models import Cl, Cv, JobApplication
 from app.schemas.job_applications import (
     ClOut,
     CvOut,
@@ -26,15 +22,9 @@ from app.schemas.job_applications import (
     StartFromSession,
 )
 from app.services.auth import CurrentUser
-from app.services.latex import (
-    compile_latex_to_pdf,
-    cover_letter_to_latex,
-    cv_to_latex,
-)
-from app.services.latex_escape import (
-    escape_cover_letter_for_latex,
-    escape_cv_for_latex,
-)
+from app.services.ownership import get_owned
+from app.services.saved_documents import compile_cl_pdf, compile_cv_pdf
+from app.services.sessions import get_user_session, latest_document
 
 router = APIRouter(prefix="/job-applications", tags=["job-applications"])
 logger = logging.getLogger(__name__)
@@ -42,64 +32,10 @@ logger = logging.getLogger(__name__)
 
 # ---------- helpers ----------
 
-def _latest_structured_from_session(
-    db: Session, session: CvSession, msg_type: str
-) -> tuple[dict, str | None] | None:
-    """Scan a session's messages reverse-chrono for the most recent assistant
-    CV or cover-letter (msg_type in {'cv','cover_letter'}) and return its
-    (structured_data, pdf_base64) — pdf may be None if it wasn't cached on
-    the message."""
-    msgs = db.scalars(
-        select(Message)
-        .where(Message.cv_session_id == session.id)
-        .order_by(Message.created_at)
-    ).all()
-    for m in reversed(msgs):
-        if m.role != "assistant":
-            continue
-        if m.content.get("type") == msg_type:
-            data = m.content.get("structured_data")
-            if data:
-                return data, m.content.get("pdf_base64") or None
-    return None
-
-
-def _compile_cv_pdf(db: Session, cv: Cv) -> str:
-    """Compile a saved CV to PDF (base64), cache it on the row, return it."""
-    try:
-        structured = CurriculumVitae.model_validate(cv.structured_data)
-    except ValidationError as exc:
-        raise HTTPException(422, f"Stored CV is malformed: {exc}") from exc
-    slug = DEFAULT_TEMPLATE_SLUG
-    if cv.template_id:
-        tmpl = db.get(Template, cv.template_id)
-        if tmpl:
-            slug = tmpl.slug
-    latex = cv_to_latex(escape_cv_for_latex(structured), slug)
-    compiled = compile_latex_to_pdf(latex)
-    if not compiled.success or not compiled.pdf_bytes:
-        logger.error("CV %s PDF compile failed: %s", cv.id, compiled.error)
-        raise HTTPException(500, "PDF compilation failed.")
-    pdf_b64 = base64.b64encode(compiled.pdf_bytes).decode()
-    cv.pdf_base64 = pdf_b64
-    db.commit()
-    return pdf_b64
-
-
-def _compile_cl_pdf(db: Session, cl: Cl) -> str:
-    try:
-        structured = CoverLetter.model_validate(cl.structured_data)
-    except ValidationError as exc:
-        raise HTTPException(422, f"Stored cover letter is malformed: {exc}") from exc
-    latex = cover_letter_to_latex(escape_cover_letter_for_latex(structured))
-    compiled = compile_latex_to_pdf(latex)
-    if not compiled.success or not compiled.pdf_bytes:
-        logger.error("CL %s PDF compile failed: %s", cl.id, compiled.error)
-        raise HTTPException(500, "PDF compilation failed.")
-    pdf_b64 = base64.b64encode(compiled.pdf_bytes).decode()
-    cl.pdf_base64 = pdf_b64
-    db.commit()
-    return pdf_b64
+def _check_owns(db: Session, model: type, item_id: uuid.UUID | None, user_id: uuid.UUID, label: str) -> None:
+    """Validate that a referenced document, when supplied, belongs to the user."""
+    if item_id is not None:
+        get_owned(db, model, item_id, user_id, not_found=f"{label} not found.")
 
 
 def _to_application_out(app: JobApplication) -> JobApplicationOut:
@@ -142,14 +78,8 @@ def save_cv_from_session(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> Cv:
-    session = db.scalar(
-        select(CvSession).where(
-            CvSession.id == body.session_id, CvSession.user_id == current_user.id
-        )
-    )
-    if session is None:
-        raise HTTPException(404, "Conversation not found.")
-    latest = _latest_structured_from_session(db, session, "cv")
+    session = get_user_session(db, body.session_id, current_user.id)
+    latest = latest_document(db, session.id, "cv")
     if latest is None:
         raise HTTPException(404, "No CV has been generated in this conversation yet.")
     structured, pdf_b64 = latest
@@ -172,10 +102,7 @@ def delete_cv(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
-    cv = db.scalar(select(Cv).where(Cv.id == cv_id, Cv.user_id == current_user.id))
-    if cv is None:
-        raise HTTPException(404, "CV not found.")
-    db.delete(cv)
+    db.delete(get_owned(db, Cv, cv_id, current_user.id, not_found="CV not found."))
     db.commit()
 
 
@@ -185,11 +112,8 @@ def render_cv_pdf(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
-    cv = db.scalar(select(Cv).where(Cv.id == cv_id, Cv.user_id == current_user.id))
-    if cv is None:
-        raise HTTPException(404, "CV not found.")
-    pdf_b64 = cv.pdf_base64 or _compile_cv_pdf(db, cv)
-    return {"pdf_base64": pdf_b64}
+    cv = get_owned(db, Cv, cv_id, current_user.id, not_found="CV not found.")
+    return {"pdf_base64": cv.pdf_base64 or compile_cv_pdf(db, cv)}
 
 
 # ---------- saved cover letters ----------
@@ -210,14 +134,8 @@ def save_cl_from_session(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> Cl:
-    session = db.scalar(
-        select(CvSession).where(
-            CvSession.id == body.session_id, CvSession.user_id == current_user.id
-        )
-    )
-    if session is None:
-        raise HTTPException(404, "Conversation not found.")
-    latest = _latest_structured_from_session(db, session, "cover_letter")
+    session = get_user_session(db, body.session_id, current_user.id)
+    latest = latest_document(db, session.id, "cover_letter")
     if latest is None:
         raise HTTPException(404, "No cover letter has been generated in this conversation yet.")
     structured, pdf_b64 = latest
@@ -239,10 +157,7 @@ def delete_cl(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
-    cl = db.scalar(select(Cl).where(Cl.id == cl_id, Cl.user_id == current_user.id))
-    if cl is None:
-        raise HTTPException(404, "Cover letter not found.")
-    db.delete(cl)
+    db.delete(get_owned(db, Cl, cl_id, current_user.id, not_found="Cover letter not found."))
     db.commit()
 
 
@@ -252,11 +167,8 @@ def render_cl_pdf(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
-    cl = db.scalar(select(Cl).where(Cl.id == cl_id, Cl.user_id == current_user.id))
-    if cl is None:
-        raise HTTPException(404, "Cover letter not found.")
-    pdf_b64 = cl.pdf_base64 or _compile_cl_pdf(db, cl)
-    return {"pdf_base64": pdf_b64}
+    cl = get_owned(db, Cl, cl_id, current_user.id, not_found="Cover letter not found.")
+    return {"pdf_base64": cl.pdf_base64 or compile_cl_pdf(db, cl)}
 
 
 # ---------- applications ----------
@@ -280,8 +192,8 @@ def create_application(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> JobApplicationOut:
-    _check_owns_cv(db, current_user, body.submitted_cv_id)
-    _check_owns_cl(db, current_user, body.submitted_cl_id)
+    _check_owns(db, Cv, body.submitted_cv_id, current_user.id, "CV")
+    _check_owns(db, Cl, body.submitted_cl_id, current_user.id, "Cover letter")
     app = JobApplication(
         user_id=current_user.id,
         job_name=body.job_name.strip() or "Untitled application",
@@ -303,17 +215,11 @@ def start_from_session(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> JobApplicationOut:
-    session = db.scalar(
-        select(CvSession).where(
-            CvSession.id == body.session_id, CvSession.user_id == current_user.id
-        )
-    )
-    if session is None:
-        raise HTTPException(404, "Conversation not found.")
+    session = get_user_session(db, body.session_id, current_user.id)
 
     name = body.job_name.strip() or session.title or "Untitled application"
-    cv_latest = _latest_structured_from_session(db, session, "cv")
-    cl_latest = _latest_structured_from_session(db, session, "cover_letter")
+    cv_latest = latest_document(db, session.id, "cv")
+    cl_latest = latest_document(db, session.id, "cover_letter")
 
     cv_id: uuid.UUID | None = None
     cl_id: uuid.UUID | None = None
@@ -363,19 +269,12 @@ def update_application(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> JobApplicationOut:
-    app = db.scalar(
-        select(JobApplication).where(
-            JobApplication.id == application_id,
-            JobApplication.user_id == current_user.id,
-        )
-    )
-    if app is None:
-        raise HTTPException(404, "Application not found.")
+    app = get_owned(db, JobApplication, application_id, current_user.id, not_found="Application not found.")
     data = body.model_dump(exclude_unset=True)
     if "submitted_cv_id" in data:
-        _check_owns_cv(db, current_user, data["submitted_cv_id"])
+        _check_owns(db, Cv, data["submitted_cv_id"], current_user.id, "CV")
     if "submitted_cl_id" in data:
-        _check_owns_cl(db, current_user, data["submitted_cl_id"])
+        _check_owns(db, Cl, data["submitted_cl_id"], current_user.id, "Cover letter")
     for key, value in data.items():
         setattr(app, key, value)
     db.commit()
@@ -389,29 +288,6 @@ def delete_application(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
-    app = db.scalar(
-        select(JobApplication).where(
-            JobApplication.id == application_id,
-            JobApplication.user_id == current_user.id,
-        )
-    )
-    if app is None:
-        raise HTTPException(404, "Application not found.")
+    app = get_owned(db, JobApplication, application_id, current_user.id, not_found="Application not found.")
     db.delete(app)
     db.commit()
-
-
-def _check_owns_cv(db: Session, user: User, cv_id: uuid.UUID | None) -> None:
-    if cv_id is None:
-        return
-    cv = db.scalar(select(Cv).where(Cv.id == cv_id, Cv.user_id == user.id))
-    if cv is None:
-        raise HTTPException(404, "CV not found.")
-
-
-def _check_owns_cl(db: Session, user: User, cl_id: uuid.UUID | None) -> None:
-    if cl_id is None:
-        return
-    cl = db.scalar(select(Cl).where(Cl.id == cl_id, Cl.user_id == user.id))
-    if cl is None:
-        raise HTTPException(404, "Cover letter not found.")

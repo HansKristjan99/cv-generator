@@ -207,14 +207,16 @@
 
 .miniPdfFrame {
   position: absolute;
-  top: 50%;
+  top: 0;
   left: 50%;
   width: 595px;
   height: 842px;
   border: 0;
-  /* Scaled slightly larger than the wrap so the PDF viewer's dark chrome
-     falls outside the clip; only the page interior remains visible. */
-  transform: translate(-50%, -50%) scale(0.26);
+  /* Aggressively zoom into the page's top so Chrome's dark PDF-viewer
+     chrome (which sits below the page inside the embed) is pushed far
+     outside the wrap's clip. Trades page-edge content for a clean preview. */
+  transform: translateX(-50%) scale(0.5);
+  transform-origin: 50% 0;
   pointer-events: none;
   background: #fff;
 }
