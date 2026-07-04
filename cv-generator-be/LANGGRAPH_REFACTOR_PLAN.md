@@ -35,8 +35,9 @@ and testable.
 
 ### Non-goals
 
-- No FE changes. `/cv/generate/` request/response shapes, session polling, message
-  `type` values (`cv`, `cover_letter`, `question`, `text`) all stay identical.
+- No breaking FE changes. `/cv/generate/` request/response shapes, session polling,
+  message `type` values (`cv`, `cover_letter`, `question`, `text`) all stay identical.
+  (§5.1 adds one *additive* progress endpoint the FE can adopt on its own schedule.)
 - No change to LaTeX rendering, templates, escaping, quotas, billing, auth.
 - No streaming tokens to the FE (the FE polls; we only improve *what* it polls).
 - Not a rewrite of the memory/invent/title agents' prompts — they get re-homed as nodes,
@@ -477,6 +478,57 @@ def node_model(role: Literal["writer", "hiring_manager", "extractor", ...]) -> B
 actually sees. `api/cv_invent.py` keeps calling `InventAgent`; its transcript source
 switches to our `Message` rows (§4.7).
 
+### 5.1 Live progress & explainable trace in the FE (additive)
+
+The graph's node boundaries double as user-facing progress events. Today the FE shows a
+static `CvGeneratingCard` spinner while polling every 2s; with the graph we can replace
+it with a live step timeline — *"Reading the job description → Gathering proof →
+Writing draft → Hiring manager reviewing → Revising (round 1) → Done"* — where each
+step expands to show what the agent actually produced. The same data persists after the
+run, so every assistant CV message can carry a "how this was made" trace: requirements
+found, evidence gathered, panel scores per round, what each revision fixed. This is
+both a UX win (generation takes minutes; a live narrative beats a spinner) and a
+product differentiator (the review panel's work becomes *visible*, which also markets
+the paid tier's extra revision rounds).
+
+**Backend design (this repo's scope):**
+
+- **`generation_events` table** (`session_id FK, turn int, seq int, node text,
+  status text('started'|'done'|'error'), label text, payload JSONB, created_at`).
+  Append-only; deleted with the session. Payloads are compact summaries, never PDFs.
+- **Emission:** `runner.py` drives the graph with `graph.stream(..., stream_mode="updates")`
+  instead of `invoke`. Each yielded node update maps through a per-node
+  `summarize_for_event()` → one committed event row (own short DB transaction so the
+  polling reader sees it immediately). Parallel panel critics emit independently as
+  each finishes, which makes the fan-out visible in the UI for free.
+- **Per-node payloads (expandable detail):**
+  - `requirements_extractor` → the requirement list (the FE already renders this shape
+    in `RequirementsBar`);
+  - `evidence_ledger_builder` → fact count + the facts (kind, statement, source);
+  - `clarification_gate` → questions asked / "all must-haves covered";
+  - `writer` → mode (draft/edit/revision round n) + one-line change summary on edits;
+  - `render` → page count vs limit, fit/overflow;
+  - each critic → score, verdict, and its `CritiqueItem`s (severity, location, problem,
+    fix) — this is the "see the replies" content, and it's all derived from the user's
+    own data, so there is no leakage concern; internal prompts are never emitted;
+  - `critique_aggregator` → aggregate score, decision (approve / revise round n / best-so-far);
+  - `persist_message` → done.
+- **API:** `GET /cv/sessions/{id}/progress?turn=latest` returning the ordered events;
+  additive, so the existing FE keeps working untouched. The FE's existing 2s poll loop
+  simply gains one call while status is `pending/running` — no SSE/WebSocket needed
+  (revisit only if 2s granularity ever feels stale).
+- **Tier gating (optional):** free tier sees step labels only; paid sees expanded
+  critique payloads. Pure API-response filtering, decided at serialization time.
+
+**FE sketch (separate PR, out of this plan's scope):** `CvGeneratingCard` becomes a
+step list fed by the progress endpoint — collapsed rows with a spinner/check per step,
+expandable to the payload; after completion the same component renders read-only from
+the stored events under the assistant message.
+
+Cost of the whole feature on the BE side: one table, one migration, ~10 small
+summarizer functions, one endpoint — because the graph already produces every artifact
+the timeline needs. This is the payoff of §3's "explicit orchestration" goal.
+
 ---
 
 ## 6. Code layout
@@ -488,7 +540,8 @@ app/
     state.py            # PipelineState, reducers, TurnInput
     llm.py              # node_model(), structured-output helpers, pdf content blocks
     builder.py          # build_graph() — nodes, edges, subgraphs, compile(checkpointer)
-    runner.py           # run_graph_turn(): invoke/resume, interrupt→message, error→status
+    runner.py           # run_graph_turn(): stream/resume, interrupt→message, error→status
+    events.py           # per-node summarize_for_event() + generation_events writes (§5.1)
     checkpointer.py     # PostgresSaver wiring + lifecycle
     nodes/
       intake.py
@@ -523,11 +576,14 @@ One Alembic migration (`021_langgraph_checkpoints.py`):
 1. Create LangGraph checkpoint tables (`PostgresSaver.setup()` DDL inlined).
 2. `cv_sessions.conversation_id` → nullable, no longer written for new sessions
    (kept one release for rollback; dropped in a follow-up migration `022`).
-3. `cv_sessions.job_requirements` — keep (the FE reads it? verify; if unused by FE,
-   deprecate — the graph state is now the source of truth) — **decision: keep as a
-   read-model copy** written by the requirements node, so ops can inspect it with SQL.
-4. Session deletion: extend `services/sessions.py` delete path to purge checkpoint rows
-   by `thread_id`.
+3. `cv_sessions.job_requirements` — **keep as a read-model copy** written by the
+   requirements node. Verified: the FE reads it (`LoadConversationResponse.job_requirements`
+   → `RequirementsBar` in the chat header, and again in the job-application detail
+   modal), so the column is load-bearing, not legacy.
+4. `generation_events` table for the progress timeline (§5.1) — migration
+   `022_generation_events.py` (the conversation_id drop shifts to `023`).
+5. Session deletion: extend `services/sessions.py` delete path to purge checkpoint rows
+   by `thread_id` and `generation_events` rows by session.
 
 No changes to `users`, `messages`, memory tables, billing.
 
@@ -574,6 +630,11 @@ until Phase 6.
 - Cover-letter subgraph; memory/title as post nodes; `cv_edit.py` writes into graph
   state; `cv_invent.py` transcript from `Message` rows; invent answers resume the
   interrupt and append ledger facts.
+
+**Phase 4b — progress timeline (§5.1)**
+- Migration 022, `graph/events.py`, switch runner from `invoke` to `stream`,
+  `GET /cv/sessions/{id}/progress`. BE ships dark (endpoint live, unused); the FE
+  timeline component lands as its own PR whenever — no coupling to the cutover.
 
 **Phase 5 — bake-off & tuning**
 - Flag on in staging; A/B a sample of sessions (flag per user id hash) in prod.
@@ -658,7 +719,10 @@ Each phase is one PR; the plan file gets updated with decisions/deviations as ph
 2. Should the readability critic also see the *job description tone* (startup vs
    enterprise) to calibrate voice? Cheap to add to its prompt; try in Phase 3.
 3. Free-tier loop budget: `MAX_REVISION_ROUNDS=1` vs 2 — cost data decides.
-4. Is `cv_sessions.job_requirements` read anywhere by the FE? (Grep says the FE fetches
-   messages/sessions; verify before deprecating.)
+4. ~~Is `cv_sessions.job_requirements` read anywhere by the FE?~~ **Answered:** yes —
+   `RequirementsBar` in the chat header and job-application detail modal. Column stays
+   (§7.3).
 5. Retention policy for checkpoint blobs (PDF bytes should live in `draft_history`
    as references, not raw bytes, if checkpoint size becomes an issue — measure).
+6. Progress timeline tier gating (§5.1): show full critique payloads to everyone, or
+   labels-only on free? Product call, zero code-structure impact — defer to launch.
