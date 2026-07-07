@@ -111,7 +111,11 @@ cv-generator/clerk-jwt-key=<Clerk JWT public key>
 cv-generator/openai-api-key=sk-proj_xxx
 cv-generator/stripe-secret-key=sk_live_xxx
 cv-generator/stripe-webhook-secret=whsec_xxx
+cv-generator/cloudflare-tunnel-token=eyJ...
 ```
+
+The API is served through a Cloudflare Tunnel instead of a load balancer —
+see `cv-generator-be/infra/README.md` for the one-time tunnel setup.
 
 Cloudflare frontend build variables:
 
